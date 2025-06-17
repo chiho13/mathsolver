@@ -29,9 +29,22 @@
 		A4EEA2B42E01919100AEE850 /* videoeditorUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = videoeditorUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A4EEA2D72E01967B00AEE850 /* Exceptions for "videoeditor" folder in "videoeditor" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A4EEA29A2E01918E00AEE850 /* videoeditor */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A4EEA29D2E01918E00AEE850 /* videoeditor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A4EEA2D72E01967B00AEE850 /* Exceptions for "videoeditor" folder in "videoeditor" target */,
+			);
 			path = videoeditor;
 			sourceTree = "<group>";
 		};
@@ -400,6 +413,11 @@
 				DEVELOPMENT_TEAM = CYL68JMKHB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs access to your camera to import and edit videos.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to provide you with relevant information.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "This app needs permission to save edited videos to your photo library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs access to your photo library to import ";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -428,6 +446,11 @@
 				DEVELOPMENT_TEAM = CYL68JMKHB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs access to your camera to import and edit videos.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to provide you with relevant information.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "This app needs permission to save edited videos to your photo library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs access to your photo library to import ";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
