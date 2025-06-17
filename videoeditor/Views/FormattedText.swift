@@ -17,42 +17,90 @@ struct FormattedText: View {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         
-        // Further split paragraphs that contain multiple headers
+        // Further split paragraphs and group list items
         var result: [String] = []
         for paragraph in paragraphs {
             let lines = paragraph.components(separatedBy: "\n")
             var currentGroup: [String] = []
+            var currentListItems: [String] = []
+            var currentListType: String? = nil // "unordered" or "ordered"
             
             for line in lines {
                 let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                
                 // Check if this line is a header
                 if trimmedLine.range(of: #"^#{1,6}\s+"#, options: .regularExpression) != nil {
-                    // If we have accumulated non-header content, add it as a group
-                    if !currentGroup.isEmpty {
-                        result.append(currentGroup.joined(separator: "\n"))
-                        currentGroup = []
-                    }
+                    // Flush any current content
+                    flushCurrentContent(&result, &currentGroup, &currentListItems, &currentListType)
                     // Add the header as its own item
                     result.append(trimmedLine)
-                } else if !trimmedLine.isEmpty {
-                    // Add non-header content to current group
+                }
+                // Check if this line is an unordered list item
+                else if trimmedLine.range(of: #"^[-*+]\s+"#, options: .regularExpression) != nil {
+                    // If we were building a different type of list or regular content, flush it
+                    if currentListType != "unordered" {
+                        flushCurrentContent(&result, &currentGroup, &currentListItems, &currentListType)
+                        currentListType = "unordered"
+                    }
+                    currentListItems.append(trimmedLine)
+                }
+                // Check if this line is an ordered list item
+                else if trimmedLine.range(of: #"^\d+\.\s+"#, options: .regularExpression) != nil {
+                    // If we were building a different type of list or regular content, flush it
+                    if currentListType != "ordered" {
+                        flushCurrentContent(&result, &currentGroup, &currentListItems, &currentListType)
+                        currentListType = "ordered"
+                    }
+                    currentListItems.append(trimmedLine)
+                }
+                else if !trimmedLine.isEmpty {
+                    // Regular content - flush any current list
+                    if !currentListItems.isEmpty {
+                        flushCurrentContent(&result, &currentGroup, &currentListItems, &currentListType)
+                    }
+                    // Add non-header, non-list content to current group
                     currentGroup.append(trimmedLine)
                 }
             }
             
             // Add any remaining content
-            if !currentGroup.isEmpty {
-                result.append(currentGroup.joined(separator: "\n"))
-            }
+            flushCurrentContent(&result, &currentGroup, &currentListItems, &currentListType)
         }
         
         print("Processed paragraphs: \(result)") // Debug: Log paragraphs
         return result
     }
     
+    private func flushCurrentContent(_ result: inout [String], _ currentGroup: inout [String], _ currentListItems: inout [String], _ currentListType: inout String?) {
+        // Add any accumulated regular content
+        if !currentGroup.isEmpty {
+            result.append(currentGroup.joined(separator: "\n"))
+            currentGroup = []
+        }
+        
+        // Add any accumulated list items as a single block
+        if !currentListItems.isEmpty {
+            let listMarker = currentListType == "ordered" ? "ORDERED_LIST:" : "UNORDERED_LIST:"
+            result.append(listMarker + currentListItems.joined(separator: "\n"))
+            currentListItems = []
+            currentListType = nil
+        }
+    }
+    
     private func processMarkdownParagraph(_ text: String) -> AnyView {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
         print("Processing paragraph: '\(trimmedText)'") // Debug: Log input
+        
+        // Check for list blocks first
+        if trimmedText.hasPrefix("UNORDERED_LIST:") {
+            let listContent = String(trimmedText.dropFirst("UNORDERED_LIST:".count))
+            return AnyView(processUnorderedList(listContent))
+        }
+        
+        if trimmedText.hasPrefix("ORDERED_LIST:") {
+            let listContent = String(trimmedText.dropFirst("ORDERED_LIST:".count))
+            return AnyView(processOrderedList(listContent))
+        }
         
         // Regex: 1-6 hashes, required space, optional content
         let headerPattern = #"^(#{1,6})\s+(.*)$"#
@@ -98,69 +146,74 @@ struct FormattedText: View {
         let linkPattern = #"\[(.*?)\]\((.*?)\)"#
         guard let regex = try? NSRegularExpression(pattern: linkPattern) else {
             print("Link regex failed")
-            return AnyView(styledText(text))
+            return AnyView(Text(createStyledAttributedString(text)))
         }
         let nsText = text as NSString
         let matches = regex.matches(in: text, range: NSRange(location: 0, length: nsText.length))
         
         if matches.isEmpty {
-            return AnyView(styledText(text))
+            return AnyView(Text(createStyledAttributedString(text)))
         }
         
-        var views: [AnyView] = []
+        // Create a flowing text layout that wraps properly
+        return AnyView(
+            Text(createAttributedStringWithLinks(text: text, matches: matches))
+                .environment(\.openURL, OpenURLAction { url in
+                    UIApplication.shared.open(url)
+                    return .handled
+                })
+        )
+    }
+    
+    private func createAttributedStringWithLinks(text: String, matches: [NSTextCheckingResult]) -> AttributedString {
+        var result = AttributedString()
+        let nsText = text as NSString
         var lastIndex = 0
+        
         for match in matches {
             let range = match.range
             let linkTextRange = match.range(at: 1)
             let urlRange = match.range(at: 2)
             
+            // Add text before the link
             if range.location > lastIndex {
                 let before = nsText.substring(with: NSRange(location: lastIndex, length: range.location - lastIndex))
                 if !before.isEmpty {
-                    views.append(AnyView(styledText(before)))
+                    result += createStyledAttributedString(before)
                 }
             }
             
+            // Add the link
             let linkText = nsText.substring(with: linkTextRange)
             let urlString = nsText.substring(with: urlRange)
+            
             if let url = URL(string: urlString) {
-                views.append(AnyView(
-                    Button(action: {
-                        UIApplication.shared.open(url)
-                    }) {
-                        Text(linkText)
-                            .foregroundColor(.blue)
-                            .underline()
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.blue.opacity(0.1))
-                                    .padding(-2)
-                            )
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                ))
+                var linkAttributedString = createStyledAttributedString(linkText)
+                linkAttributedString.foregroundColor = .blue
+                linkAttributedString.underlineStyle = .single
+                linkAttributedString.link = url
+                result += linkAttributedString
             } else {
-                views.append(AnyView(styledText("[\(linkText)](\(urlString))")))
+                // If URL is invalid, just show the markdown syntax
+                result += createStyledAttributedString("[\(linkText)](\(urlString))")
             }
+            
             lastIndex = range.location + range.length
         }
         
+        // Add remaining text
         if lastIndex < nsText.length {
             let after = nsText.substring(from: lastIndex)
             if !after.isEmpty {
-                views.append(AnyView(styledText(after)))
+                result += createStyledAttributedString(after)
             }
         }
         
-        return AnyView(HStack(spacing: 0) {
-            ForEach(0..<views.count, id: \.self) { i in
-                views[i]
-            }
-        })
+        return result
     }
     
-    private func styledText(_ text: String) -> Text {
-        var result = Text("")
+    private func createStyledAttributedString(_ text: String) -> AttributedString {
+        var result = AttributedString(text)
         let nsText = text as NSString
         
         let boldPattern = #"\*\*(.*?)\*\*"#
@@ -193,32 +246,75 @@ struct FormattedText: View {
             }
         }
         
-        matches.sort { $0.range.location < $1.range.location }
+        matches.sort { $0.range.location > $1.range.location } // Process from end to start to maintain indices
         
-        var currentOffset = 0
-        
+        // Apply styling from end to start to preserve string indices
         for match in matches {
-            if match.range.location > currentOffset {
-                let plainText = nsText.substring(with: NSRange(location: currentOffset, length: match.range.location - currentOffset))
-                result = result + Text(plainText)
-            }
+            let swiftRange = Range(match.range, in: text)!
+            let contentSwiftRange = Range(match.contentRange, in: text)!
             
-            let styledContent = nsText.substring(with: match.contentRange)
+            let styledContent = String(text[contentSwiftRange])
+            var styledAttributedString = AttributedString(styledContent)
+            
             if match.type == "bold" {
-                result = result + Text(styledContent).bold()
+                styledAttributedString.font = .body.bold()
             } else if match.type == "italic" {
-                result = result + Text(styledContent).italic()
+                styledAttributedString.font = .body.italic()
             }
             
-            currentOffset = match.range.location + match.range.length
-        }
-        
-        if currentOffset < nsText.length {
-            let remainingText = nsText.substring(from: currentOffset)
-            result = result + Text(remainingText)
+            // Replace the original markdown with styled content
+            let attributedRange = AttributedString.Index(swiftRange.lowerBound, within: result)!..<AttributedString.Index(swiftRange.upperBound, within: result)!
+            result.replaceSubrange(attributedRange, with: styledAttributedString)
         }
         
         return result
+    }
+    
+
+    
+    private func processUnorderedList(_ listContent: String) -> some View {
+        let items = listContent.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        
+        return VStack(alignment: .leading, spacing: 4) {
+            ForEach(0..<items.count, id: \.self) { index in
+                let item = items[index]
+                // Remove the list marker (-, *, or +) and process the content
+                let content = item.replacingOccurrences(of: #"^[-*+]\s+"#, with: "", options: .regularExpression)
+                HStack(alignment: .top, spacing: 8) {
+                    Text("•")
+                        .font(.body)
+                        .foregroundColor(.primary)
+                    processLineWithLinks(content)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .padding(.leading, 16)
+    }
+    
+    private func processOrderedList(_ listContent: String) -> some View {
+        let items = listContent.components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        
+        return VStack(alignment: .leading, spacing: 4) {
+            ForEach(0..<items.count, id: \.self) { index in
+                let item = items[index]
+                // Remove the list marker (1., 2., etc.) and process the content
+                let content = item.replacingOccurrences(of: #"^\d+\.\s+"#, with: "", options: .regularExpression)
+                HStack(alignment: .top, spacing: 8) {
+                    Text("\(index + 1).")
+                        .font(.body)
+                        .foregroundColor(.primary)
+                        .frame(minWidth: 20, alignment: .trailing)
+                    processLineWithLinks(content)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .padding(.leading, 16)
     }
 }
 
@@ -232,7 +328,15 @@ struct FormattedText: View {
     
     [Duck Duck Go](https://duckduckgo.com)
     
-    - List item 1
-    - List item 2
+    - Unordered list item 1
+    - Unordered list item 2
+    - Unordered list item 3
+    
+    1. Ordered list item 1
+    2. Ordered list item 2
+    3. Ordered list item 3
+    
+    * Alternative bullet style
+    + Another bullet style
     """)
 }
