@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import SwiftData
 
 struct ContentView: View {
     @State private var query: String = ""
@@ -9,6 +10,10 @@ struct ContentView: View {
     @StateObject private var searchService = SearchAPIService()
     @State private var searchOutput: String? = nil
     @StateObject private var locationManager = LocationManager()
+    @FocusState private var isTextFieldFocused: Bool
+    @State private var showSidebar: Bool = false
+    @Environment(\.modelContext) private var modelContext
+    @State private var searchHistory: SearchHistoryManager?
     
     func extractSource(from text: String) -> (String, String)? {
         let pattern = "\\(\\[(.*?)\\]\\((.*?)\\)\\)"
@@ -43,78 +48,155 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Background gradient
+                // Main content
                 LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.15), Color.purple.opacity(0.10)]), startPoint: .topLeading, endPoint: .bottomTrailing)
                     .ignoresSafeArea()
                     .onTapGesture {
                         UIApplication.shared.endEditing()
                     }
-                VStack(spacing: 24) {
-                    // Stylish search bar
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundColor(.blue)
-                        TextField("Search for places, news, or tips...", text: $query)
-                            .textFieldStyle(PlainTextFieldStyle())
-                            .padding(10)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
-                            .onSubmit { performSearch() }
-                        Button(action: performSearch) {
-                            Image(systemName: "arrow.right.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(query.trimmingCharacters(in: .whitespaces).isEmpty ? .gray : .blue)
-                        }
-                        .disabled(query.trimmingCharacters(in: .whitespaces).isEmpty)
+                VStack(spacing: searchOutput == nil && errorMessage == nil && !isLoading ? 0 : 24) {
+                    
+                    if searchOutput != nil || errorMessage != nil || isLoading {
+                        // When results are shown or loading, add top spacing
+                        Spacer().frame(height: 2)
+                    } else {
+                        // When no results and not loading, center vertically
+                        Spacer()
                     }
-                    .padding(.horizontal)
-                    .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
-
-                    HStack(spacing: 20) {
-                        Button("Local Food") {
-                            if locationManager.authorizationStatus == .denied {
-                                query = "what restaurant and food are in"
-                            } else {
-                                locationManager.onPlaceNameUpdate = { placeName in
-                                    let searchQuery = "what restaurant and food are in \(placeName)"
-                                    query = searchQuery
-                                    performSearch()
+                    
+                    // Search interface container
+                    VStack(spacing: 24) {
+                        // Stylish search bar
+                        ZStack {
+                            TextField("Search for places, news, or tips...", text: $query)
+                                .textFieldStyle(PlainTextFieldStyle())
+                                .font(.system(size: 17, weight: .medium, design: .rounded))
+                                .padding(.leading, 45)
+                                .padding(.trailing, 55)
+                                .padding(.vertical, 19)
+                                .background(
+                                    ZStack {
+                                        Color.white
+                                        Color(.systemGray6).opacity(isTextFieldFocused ? 0.3 : 1.0)
+                                    }
+                                )
+                                .cornerRadius(16)
+                                .overlay(
+                                    // Gradient border overlay when focused
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .strokeBorder(
+                                            isTextFieldFocused ? 
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [.blue, .purple.opacity(0.8), .blue]),
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ) : 
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [.clear]),
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 2
+                                        )
+                                        .opacity(isTextFieldFocused ? 1 : 0)
+                                )
+                                .focused($isTextFieldFocused)
+                                .shadow(
+                                    color: isTextFieldFocused 
+                                    ? Color.blue.opacity(0.2) 
+                                    : Color.black.opacity(0.05), 
+                                    radius: isTextFieldFocused ? 8 : 4, 
+                                    x: 0, 
+                                    y: isTextFieldFocused ? 4 : 2
+                                )
+                                .onSubmit { performSearch() }
+                            
+                            HStack {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundColor(isTextFieldFocused ? .blue : .blue.opacity(0.7))
+                                    .font(.system(size: 16, weight: .medium))
+                                    .padding(.leading, 15)
+                                
+                                Spacer()
+                                
+                                Button(action: performSearch) {
+                                    Image(systemName: "arrow.right.circle.fill")
+                                        .font(.system(size: 22, weight: .medium))
+                                        .foregroundColor(
+                                            query.trimmingCharacters(in: .whitespaces).isEmpty 
+                                            ? .gray.opacity(0.4) 
+                                            : (isTextFieldFocused ? .blue : .blue.opacity(0.8))
+                                        )
                                 }
-                                locationManager.startUpdatingLocation()
+                                .disabled(query.trimmingCharacters(in: .whitespaces).isEmpty)
+                                .padding(.trailing, 15)
                             }
+                            
                         }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(
-                            LinearGradient(gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.7)]), startPoint: .top, endPoint: .bottom)
-                        )
-                        .cornerRadius(10)
-                        .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                        .padding(.horizontal)
+                        .animation(.easeOut(duration: 0.12), value: isTextFieldFocused)
 
-                        Button("Local TODO") {
-                            if locationManager.authorizationStatus == .denied {
-                                query = "what is there todo in"
-                            } else {
-                                locationManager.onPlaceNameUpdate = { placeName in
-                                    let searchQuery = "what is there todo in \(placeName)"
-                                    query = searchQuery
-                                    performSearch()
-                                }
-                                locationManager.startUpdatingLocation()
-                            }
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .background(
-                            LinearGradient(gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.7)]), startPoint: .top, endPoint: .bottom)
-                        )
-                        .cornerRadius(10)
-                        .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                        // HStack(spacing: 20) {
+                        //     Button("Local Food") {
+                        //         if locationManager.authorizationStatus == .denied {
+                        //             query = "what restaurant and food are in"
+                        //         } else {
+                        //             locationManager.onPlaceNameUpdate = { placeName in
+                        //                 let searchQuery = "what restaurant and food are in \(placeName)"
+                        //                 query = searchQuery
+                        //                 performSearch()
+                        //             }
+                        //             locationManager.startUpdatingLocation()
+                        //         }
+                        //     }
+                        //     .font(.headline)
+                        //     .foregroundColor(.white)
+                        //     .padding()
+                        //     .background(
+                        //         LinearGradient(gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.7)]), startPoint: .top, endPoint: .bottom)
+                        //     )
+                        //     .cornerRadius(10)
+                        //     .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+
+                        //     Button("Local TODO") {
+                        //         if locationManager.authorizationStatus == .denied {
+                        //             query = "what is there todo in"
+                        //         } else {
+                        //             locationManager.onPlaceNameUpdate = { placeName in
+                        //                 let searchQuery = "what is there todo in \(placeName)"
+                        //                 query = searchQuery
+                        //                 performSearch()
+                        //             }
+                        //             locationManager.startUpdatingLocation()
+                        //         }
+                        //     }
+                        //     .font(.headline)
+                        //     .foregroundColor(.white)
+                        //     .padding()
+                        //     .background(
+                        //         LinearGradient(gradient: Gradient(colors: [Color.blue, Color.blue.opacity(0.7)]), startPoint: .top, endPoint: .bottom)
+                        //     )
+                        //     .cornerRadius(10)
+                        //     .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                        // }
                     }
-
-                    Spacer(minLength: 0)
+                    
+                    // Loading indicator
+                    if isLoading {
+                        HStack {
+                          LoadingThreeBalls(color: .blue)
+                            Text("Searching...")
+                                .foregroundColor(.blue)
+                                .font(.subheadline)
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                    }
+                    
+                    if searchOutput == nil && errorMessage == nil && !isLoading {
+                        // When no results and not loading, center vertically with spacer below
+                        Spacer()
+                    }
 
                     if let errorMessage = errorMessage {
                         Spacer()
@@ -127,63 +209,82 @@ struct ContentView: View {
                             .shadow(radius: 4)
                         Spacer()
                     } else if let searchOutput = searchOutput {
-                        Spacer()
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 16) {
-                                Text("Results")
-                                    .font(.title2).bold()
-                                    .foregroundColor(.blue)
-                                
-                                processContent(searchOutput)
-                                    .padding()
-                                    .background(Color.white.opacity(0.9))
-                                    .cornerRadius(12)
-                                    .shadow(radius: 2)
+                        VStack(alignment: .leading, spacing: 0) {
+                            // Results header
+                            // HStack {
+                            //     Text("Results")
+                            //         .font(.title2).bold()
+                            //         .foregroundColor(.blue)
+                            //     Spacer()
+                            // }
+                            // .padding(.horizontal, 20)
+                            // .padding(.top, 16)
+                            // .padding(.bottom, 12)
+                            // .background(Color.white.opacity(0.95))
+                            
+                            // Scrollable content area
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    processContent(searchOutput)
+                                        .padding(.horizontal, 20)
+                                        .padding(.vertical, 16)
+                                }
                             }
-                            .padding()
+                            .background(Color.white.opacity(0.95))
                         }
-                        Spacer()
-                    } else {
-                        Spacer()
-                        Text("No results yet. Try searching for something!")
-                            .foregroundColor(.secondary)
-                            .font(.headline)
-                            .padding()
-                             FormattedText(text: """
-    # Header 1
-    ## Header 2
-    ### Header 3
-    
-    This is a paragraph with **bold** and *italic* text.
-    
-    [Duck Duck Go](https://duckduckgo.com)
-    
-    - List item 1
-    - List item 2
-    """)
-                        Spacer()
-                    }
+                        .background(Color.white.opacity(0.95))
+                        .cornerRadius(16)
+                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 20)
+                    } 
                 }
-                .navigationTitle("Travel & News Finder")
                 .font(.system(.body, design: .rounded))
                 .padding(.top, 24)
+                .offset(y: searchOutput == nil && errorMessage == nil && !isLoading ? -40 : 0)
+                .animation(.easeInOut(duration: 0.3), value: isLoading)
+                .animation(.easeInOut(duration: 0.3), value: searchOutput != nil)
+                .animation(.easeInOut(duration: 0.3), value: errorMessage != nil)
                 
-                // Overlay for loading
-                if isLoading {
-                    Color.black.opacity(0.2)
-                        .ignoresSafeArea()
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .blue))
-                            .scaleEffect(1.8)
-                        Text("Searching...")
-                            .font(.title3).bold()
+                // Sidebar overlay
+                if showSidebar, let searchHistory = searchHistory {
+                    SidebarView(
+                        showSidebar: $showSidebar,
+                        searchHistory: searchHistory,
+                        query: $query,
+                        searchOutput: $searchOutput
+                    )
+                        .zIndex(1)
+                }
+            }
+            .onAppear {
+                if searchHistory == nil {
+                    searchHistory = SearchHistoryManager(modelContext: modelContext)
+                }
+            }
+            .animation(.easeInOut(duration: 0.3), value: showSidebar)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.1)) {
+                            showSidebar = true
+                        }
+                    }) {
+                        Image(systemName: "sidebar.left")
+                            .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.blue)
+                            .shadow(color: Color.black.opacity(0.15), radius: 1, x: 0, y: 1)
+                            .contentShape(Rectangle())
+                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.white.opacity(0.8))
+                                    .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                            )
                     }
-                    .padding(32)
-                    .background(BlurView(style: .systemMaterial))
-                    .cornerRadius(20)
-                    .shadow(radius: 10)
+                    .padding(.top, 8)
+                    .opacity(showSidebar ? 0 : 1)
                 }
             }
         }
@@ -203,6 +304,8 @@ struct ContentView: View {
                 await MainActor.run {
                     self.searchOutput = output
                     self.isLoading = false
+                    // Add to search history
+                    self.searchHistory?.addItem(query: trimmed, result: output)
                 }
             } catch {
                 await MainActor.run {

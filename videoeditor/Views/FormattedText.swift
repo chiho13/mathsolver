@@ -128,7 +128,7 @@ struct FormattedText: View {
             
             // Apply header styling
             switch hashCount {
-            case 1: return AnyView(styled.font(.system(size: 32, weight: .bold)))
+            case 1: return AnyView(styled.font(.system(size: 30, weight: .bold)))
             case 2: return AnyView(styled.font(.system(size: 26, weight: .bold)))
             case 3: return AnyView(styled.font(.system(size: 22, weight: .bold)))
             case 4: return AnyView(styled.font(.system(size: 18, weight: .bold)))
