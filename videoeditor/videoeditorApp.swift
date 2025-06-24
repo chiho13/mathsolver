@@ -11,25 +11,57 @@ import SwiftData
 @main
 struct videoeditorApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    let container: ModelContainer
+    var sharedModelContainer: ModelContainer = {
+        let schema = Schema([
+            SearchHistoryItem.self,
+            Usage.self
+        ])
+        let modelConfiguration = ModelConfiguration(schema: schema,
+                                                    isStoredInMemoryOnly: false)
+
+        do {
+            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+        } catch {
+            fatalError("Could not create ModelContainer: \(error)")
+        }
+    }()
+
+    @State private var isFirstLaunch: Bool = {
+        // Check UserDefaults to see if the app has been launched before
+        !UserDefaults.standard.bool(forKey: "hasLaunchedBefore")
+    }()
+
+    @StateObject private var iapManager = IAPManager()
     
+    @State private var showPremView: Bool = false
+
     init() {
         // Lock orientation to portrait
         AppDelegate.orientationLock = UIInterfaceOrientationMask.portrait
-        
-        // Initialize SwiftData container
-        do {
-            container = try ModelContainer(for: SearchHistoryItem.self)
-        } catch {
-            fatalError("Failed to create ModelContainer for SearchHistoryItem: \(error)")
-        }
     }
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            if isFirstLaunch {
+                OnboardingView(isFirstLaunch: $isFirstLaunch, showPremView: $showPremView)
+                    .environmentObject(iapManager)
+//                    .environment(\.locale, Locale(identifier: "ja"))
+
+            } else {
+                if showPremView {
+                    OnboardingPremiumView(showPremView: $showPremView)
+                        .environmentObject(iapManager)
+//                        .environment(\.locale, Locale(identifier: "ja"))
+                } else {
+                    ContentView()
+                        .environmentObject(iapManager)
+//                        .environment(\.locale, Locale(identifier: "zh-Hant"))
+
+                }
+                  
+            }
         }
-        .modelContainer(container)
+        .modelContainer(sharedModelContainer)
     }
 }
 

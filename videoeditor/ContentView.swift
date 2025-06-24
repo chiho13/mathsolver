@@ -10,8 +10,10 @@ struct ContentView: View {
     @StateObject private var searchService = SearchAPIService()
     @State private var searchOutput: String? = nil
     @StateObject private var locationManager = LocationManager()
+    @StateObject private var languageSettings = LanguageSettingsViewModel()
     @FocusState private var isTextFieldFocused: Bool
     @State private var showSidebar: Bool = false
+    @State private var showPremiumView: Bool = false
     @Environment(\.modelContext) private var modelContext
     @State private var searchHistory: SearchHistoryManager?
     
@@ -264,6 +266,9 @@ struct ContentView: View {
             }
             .animation(.easeInOut(duration: 0.3), value: showSidebar)
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showPremiumView) {
+                PremiumView(headline: "paywall-title")
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
@@ -286,6 +291,24 @@ struct ContentView: View {
                     .padding(.top, 8)
                     .opacity(showSidebar ? 0 : 1)
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.1)) {
+                            showPremiumView = true
+                        }
+                    }) {
+                        Text("Upgrade")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(8)
+                            .background(
+                                LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .leading, endPoint: .trailing)
+                            )
+                            .cornerRadius(8)
+                    }
+                    .padding(.top, 8)
+                    .opacity(showPremiumView ? 0 : 1)
+                }
             }
         }
     }
@@ -300,7 +323,7 @@ struct ContentView: View {
         searchOutput = nil
         Task {
             do {
-                let output = try await searchService.search(query: trimmed)
+                let output = try await searchService.search(query: trimmed, language: languageSettings.plainEnglish[languageSettings.sourceLanguage] ?? "English")
                 await MainActor.run {
                     self.searchOutput = output
                     self.isLoading = false

@@ -70,7 +70,7 @@ struct SidebarView: View {
                                                     Text(item.query)
                                                         .font(.system(size: 15, weight: .medium))
                                                         .foregroundColor(.primary)
-                                                        .multilineTextAlignment(.leading)
+                                                        .lineLimit(1)
                                                     
                                                     Text(item.timestamp, style: .date)
                                                         .font(.caption2)

@@ -17,7 +17,7 @@ import Foundation
 import SwiftUI
 
 
-struct OnboardingPremiumView: View {
+struct LegacyOnboardingPremiumView: View {
     @Environment(\.colorScheme) var colorScheme
 //    @Environment(\.dismiss) var dismiss
     @EnvironmentObject var iapManager: IAPManager // Access IAPManager from the environment

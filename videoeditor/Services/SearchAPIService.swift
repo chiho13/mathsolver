@@ -10,11 +10,11 @@ enum SearchError: Error {
 class SearchAPIService: ObservableObject {
     private let baseURL = "https://render-proxy-psbm.onrender.com" // Placeholder for your API
     
-    func search(query: String) async throws -> String {
+    func search(query: String, language: String = "en") async throws -> String {
         guard let url = URL(string: baseURL + "/search") else {
             throw SearchError.invalidURL
         }
-        let body = ["input": "include links as source. output as markdown: \(query)"]
+        let body = ["input": "output as markdown and return result in \(language): \(query)"]
         let jsonData = try JSONEncoder().encode(body)
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
