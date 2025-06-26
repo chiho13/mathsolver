@@ -19,6 +19,9 @@
     "•" : {
 
     },
+    "2x2" : {
+
+    },
     "7 Days FREE" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -282,6 +285,9 @@
         }
       }
     },
+    "One Photo" : {
+
+    },
     "Open Settings" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -292,9 +298,6 @@
           }
         }
       }
-    },
-    "Orientation" : {
-
     },
     "Payment will be charged to your Apple ID account at the confirmation of purchase. The subscription automatically renews unless it's canceled at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage and cancel your subscription by going to your App Store account settings after purchase." : {
       "extractionState" : "manual",
@@ -579,6 +582,9 @@
       }
     },
     "Try Ekto for %lld credits for free" : {
+
+    },
+    "Two Photos" : {
 
     },
     "Unlimited" : {

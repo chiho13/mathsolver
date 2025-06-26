@@ -7,25 +7,136 @@ struct PhotoStripOverlayView: View {
     @Binding var selectedImages: [UIImage]
     @Binding var showResetConfirmation: Bool
     @Binding var isLandscape: Bool
+    @Binding var photosPerPage: Int
     let onOrientationChange: () -> Void
+    let onPhotosPerPageChange: () -> Void
+    let onPhotosAdded: () -> Void
     @State private var currentDraggingIndex: Int?
     @State private var selectedImageIndex: Int?
+    @State private var localPickerItems: [PhotosPickerItem] = []
 
     var body: some View {
         VStack(spacing: 12) {
-            Picker("Orientation", selection: $isLandscape) {
-                        Label("Portrait", systemImage: "rectangle.portrait").tag(false)
-                        Label("Landscape", systemImage: "rectangle.landscape").tag(true)
+            HStack(spacing: 0) {
+                Button(action: {
+                    if photosPerPage != 1 {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            photosPerPage = 1
+                        }
+                        DispatchQueue.main.async {
+                            onPhotosPerPageChange()
+                        }
                     }
-                    .pickerStyle(.segmented)
-                    .onChange(of: isLandscape) { _ in
+                }) {
+                    Label("One Photo", systemImage: "photo")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(photosPerPage == 1 ? .primary : .secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            photosPerPage == 1 ? Color.gray.opacity(0.8) : Color.gray.opacity(0.2)
+                        )
+                }
+                .clipShape(RoundedCorners(radius: 8, corners: [.topLeft, .bottomLeft]))
+                
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.3))
+                    .frame(width: 1, height: 32)
+                
+                Button(action: {
+                    if photosPerPage != 2 {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            photosPerPage = 2
+                        }
+                        DispatchQueue.main.async {
+                            onPhotosPerPageChange()
+                        }
+                    }
+                }) {
+                    Label("Two Photos", systemImage: "rectangle.grid.1x2")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(photosPerPage == 2 ? .primary : .secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            photosPerPage == 2 ? Color.gray.opacity(0.6) : Color.gray.opacity(0.2)
+                        )
+                }
+                
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.3))
+                    .frame(width: 1, height: 32)
+                
+                Button(action: {
+                    if photosPerPage != 4 {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            photosPerPage = 4
+                        }
+                        DispatchQueue.main.async {
+                            onPhotosPerPageChange()
+                        }
+                    }
+                }) {
+                    Label("2x2", systemImage: "rectangle.grid.2x2")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(photosPerPage == 4 ? .primary : .secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            photosPerPage == 4 ? Color.gray.opacity(0.6) : Color.gray.opacity(0.2)
+                        )
+                }
+                .clipShape(RoundedCorners(radius: 8, corners: [.topRight, .bottomRight]))
+            }
+            .padding(.horizontal)
+            
+            HStack(spacing: 0) {
+                Button(action: {
+                    if isLandscape != false {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isLandscape = false
+                        }
                         DispatchQueue.main.async {
                             onOrientationChange()
                         }
-                    }.padding(.horizontal)
+                    }
+                }) {
+                    Label("Portrait", systemImage: "rectangle.portrait")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(!isLandscape ? .primary : .secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            !isLandscape ? Color.gray.opacity(0.6) : Color.gray.opacity(0.2)
+                        )
+                }
+                .clipShape(RoundedCorners(radius: 8, corners: [.topLeft, .bottomLeft]))
+                
+                Button(action: {
+                    if isLandscape != true {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isLandscape = true
+                        }
+                        DispatchQueue.main.async {
+                            onOrientationChange()
+                        }
+                    }
+                }) {
+                    Label("Landscape", systemImage: "rectangle")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(isLandscape ? .primary : .secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            isLandscape ? Color.gray.opacity(0.6) : Color.gray.opacity(0.2)
+                        )
+                }
+                .clipShape(RoundedCorners(radius: 8, corners: [.topRight, .bottomRight]))
+            }
+            .padding(.horizontal)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    PhotosPicker(selection: $selectedPickerItems, matching: .images) {
+                    PhotosPicker(selection: $localPickerItems, matching: .images) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(Color.white.opacity(0.4))
@@ -33,6 +144,22 @@ struct PhotoStripOverlayView: View {
                             Image(systemName: "plus")
                                 .font(.largeTitle)
                                 .foregroundColor(.secondary)
+                        }
+                    }
+                    .onChange(of: localPickerItems) { newItems in
+                        Task {
+                            for item in newItems {
+                                if let data = try? await item.loadTransferable(type: Data.self),
+                                   let uiImage = UIImage(data: data) {
+                                    await MainActor.run {
+                                        selectedImages.append(uiImage)
+                                    }
+                                }
+                            }
+                            await MainActor.run {
+                                localPickerItems = []
+                                onPhotosAdded()
+                            }
                         }
                     }
 

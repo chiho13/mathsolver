@@ -23,6 +23,8 @@ struct ContentView: View {
     @State private var pdfURL: URL?
     @State private var isLandscape = false
     @State private var showPhotoStrip = false
+    @State private var photosPerPage = 1
+    @State private var scrollToBottom = false
 
     var body: some View {
         NavigationView {
@@ -36,10 +38,10 @@ struct ContentView: View {
                 
                 VStack(spacing: 0) {
                     if let pdfURL = pdfURL {
-                        PDFPreviewView(url: pdfURL, isLandscape: isLandscape)
-                            .id("\(pdfURL.absoluteString)_\(isLandscape)")
+                        PDFPreviewView(url: pdfURL, isLandscape: isLandscape, shouldScrollToBottom: $scrollToBottom)
+                            .id("\(pdfURL.absoluteString)_\(isLandscape)_\(photosPerPage)_\(selectedImages.count)")
                             .padding(.top, 10)
-                            .padding(.bottom, showPhotoStrip ? 240 : 40)
+                            .padding(.bottom, showPhotoStrip ? 290 : 40)
                             .padding(.horizontal, 10)
                             .animation(.easeInOut(duration: 0.3), value: showPhotoStrip)
                     } else if let errorMessage = errorMessage {
@@ -96,13 +98,13 @@ struct ContentView: View {
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(showPhotoStrip ? Color.secondary : Color.blue)
+                        .background(showPhotoStrip ? Color.gray.opacity(0.8) : Color.blue)
                         .foregroundColor(.white)
                         .cornerRadius(20)
                         .shadow(radius: 4)
                     }
                     .padding()
-                    .padding(.bottom, showPhotoStrip ? 220 : 20) // Move up when overlay is visible
+                    .padding(.bottom, showPhotoStrip ? 270 : 20) // Move up when overlay is visible
                     .animation(.easeInOut(duration: 0.3), value: showPhotoStrip)
                 }
             }
@@ -113,7 +115,10 @@ struct ContentView: View {
                         selectedImages: $selectedImages,
                         showResetConfirmation: $showResetConfirmation,
                         isLandscape: $isLandscape,
-                        onOrientationChange: generatePDF
+                        photosPerPage: $photosPerPage,
+                        onOrientationChange: generatePDF,
+                        onPhotosPerPageChange: generatePDF,
+                        onPhotosAdded: generatePDF
                     )
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -143,7 +148,13 @@ struct ContentView: View {
                             }
                         }
                     }
-                    selectedPickerItems = []
+                    await MainActor.run {
+                        selectedPickerItems = []
+                        // Force PDF regeneration after adding new photos
+                        if !selectedImages.isEmpty {
+                            generatePDF()
+                        }
+                    }
                 }
             }
             .animation(.easeInOut, value: !selectedImages.isEmpty)
@@ -200,23 +211,40 @@ struct ContentView: View {
                     .opacity(showPremiumView ? 0 : 1)
                 }
 
-                // Share PDF Button (when PDF is available)
+                // PDF Control Buttons (when PDF is available)
                 if let pdfURL = pdfURL {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        ShareLink(item: pdfURL) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "square.and.arrow.up")
+                        HStack(spacing: 8) {
+                            // Scroll to Bottom Button
+                            Button(action: {
+                                scrollToBottom = true
+                            }) {
+                                Image(systemName: "arrow.down.to.line")
                                     .font(.system(size: 14, weight: .medium))
-                                Text("Share")
-                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .padding(8)
+                                    .background(
+                                        LinearGradient(gradient: Gradient(colors: [.green, .green.opacity(0.8)]), startPoint: .leading, endPoint: .trailing)
+                                    )
+                                    .cornerRadius(8)
                             }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                LinearGradient(gradient: Gradient(colors: [.blue, .blue.opacity(0.8)]), startPoint: .leading, endPoint: .trailing)
-                            )
-                            .cornerRadius(8)
+                            
+                            // Share Button
+                            ShareLink(item: pdfURL) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "square.and.arrow.up")
+                                        .font(.system(size: 14, weight: .medium))
+                                    Text("Share")
+                                        .font(.system(size: 16, weight: .medium))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    LinearGradient(gradient: Gradient(colors: [.blue, .blue.opacity(0.8)]), startPoint: .leading, endPoint: .trailing)
+                                )
+                                .cornerRadius(8)
+                            }
                         }
                         .padding(.top, 8)
                         .padding(.trailing, -8)
@@ -266,6 +294,7 @@ struct ContentView: View {
     
     func generatePDF() {
         guard !selectedImages.isEmpty else { return }
+        print("Generating PDF with \(selectedImages.count) images")
         let pdfData = NSMutableData()
         // A4 paper size in points (210mm x 297mm)
         var pageRect = CGRect(x: 0, y: 0, width: 595, height: 842)
@@ -277,19 +306,96 @@ struct ContentView: View {
 
         UIGraphicsBeginPDFContextToData(pdfData, pageRect, nil)
         
-        for img in selectedImages {
-            UIGraphicsBeginPDFPageWithInfo(pageRect, nil)
-            let aspectFitRect = AVMakeRect(aspectRatio: img.size, insideRect: imageableArea)
-            img.draw(in: aspectFitRect)
+        if photosPerPage == 1 {
+            // One photo per page
+            for img in selectedImages {
+                UIGraphicsBeginPDFPageWithInfo(pageRect, nil)
+                let aspectFitRect = AVMakeRect(aspectRatio: img.size, insideRect: imageableArea)
+                img.draw(in: aspectFitRect)
+            }
+        } else if photosPerPage == 2 {
+            // Two photos per page
+            for i in stride(from: 0, to: selectedImages.count, by: 2) {
+                UIGraphicsBeginPDFPageWithInfo(pageRect, nil)
+                
+                let firstImage = selectedImages[i]
+                let spacing: CGFloat = 20
+                
+                if i + 1 < selectedImages.count {
+                    // Two images on this page
+                    let secondImage = selectedImages[i + 1]
+                    let availableHeight = imageableArea.height - spacing
+                    let halfHeight = availableHeight / 2
+                    
+                    // Top image
+                    let topRect = CGRect(x: imageableArea.minX, y: imageableArea.minY, 
+                                       width: imageableArea.width, height: halfHeight)
+                    let topAspectFitRect = AVMakeRect(aspectRatio: firstImage.size, insideRect: topRect)
+                    firstImage.draw(in: topAspectFitRect)
+                    
+                    // Bottom image
+                    let bottomRect = CGRect(x: imageableArea.minX, y: imageableArea.minY + halfHeight + spacing,
+                                          width: imageableArea.width, height: halfHeight)
+                    let bottomAspectFitRect = AVMakeRect(aspectRatio: secondImage.size, insideRect: bottomRect)
+                    secondImage.draw(in: bottomAspectFitRect)
+                } else {
+                    // Only one image on this page (last page with odd number of images)
+                    let aspectFitRect = AVMakeRect(aspectRatio: firstImage.size, insideRect: imageableArea)
+                    firstImage.draw(in: aspectFitRect)
+                }
+            }
+        } else if photosPerPage == 4 {
+            // 2x2 grid - four photos per page
+            for i in stride(from: 0, to: selectedImages.count, by: 4) {
+                UIGraphicsBeginPDFPageWithInfo(pageRect, nil)
+                
+                let spacing: CGFloat = 15
+                let availableWidth = imageableArea.width - spacing
+                let availableHeight = imageableArea.height - spacing
+                let halfWidth = availableWidth / 2
+                let halfHeight = availableHeight / 2
+                
+                // Top-left (index i)
+                if i < selectedImages.count {
+                    let topLeftRect = CGRect(x: imageableArea.minX, y: imageableArea.minY,
+                                           width: halfWidth, height: halfHeight)
+                    let topLeftAspectFitRect = AVMakeRect(aspectRatio: selectedImages[i].size, insideRect: topLeftRect)
+                    selectedImages[i].draw(in: topLeftAspectFitRect)
+                }
+                
+                // Top-right (index i+1)
+                if i + 1 < selectedImages.count {
+                    let topRightRect = CGRect(x: imageableArea.minX + halfWidth + spacing, y: imageableArea.minY,
+                                            width: halfWidth, height: halfHeight)
+                    let topRightAspectFitRect = AVMakeRect(aspectRatio: selectedImages[i+1].size, insideRect: topRightRect)
+                    selectedImages[i+1].draw(in: topRightAspectFitRect)
+                }
+                
+                // Bottom-left (index i+2)
+                if i + 2 < selectedImages.count {
+                    let bottomLeftRect = CGRect(x: imageableArea.minX, y: imageableArea.minY + halfHeight + spacing,
+                                              width: halfWidth, height: halfHeight)
+                    let bottomLeftAspectFitRect = AVMakeRect(aspectRatio: selectedImages[i+2].size, insideRect: bottomLeftRect)
+                    selectedImages[i+2].draw(in: bottomLeftAspectFitRect)
+                }
+                
+                // Bottom-right (index i+3)
+                if i + 3 < selectedImages.count {
+                    let bottomRightRect = CGRect(x: imageableArea.minX + halfWidth + spacing, y: imageableArea.minY + halfHeight + spacing,
+                                               width: halfWidth, height: halfHeight)
+                    let bottomRightAspectFitRect = AVMakeRect(aspectRatio: selectedImages[i+3].size, insideRect: bottomRightRect)
+                    selectedImages[i+3].draw(in: bottomRightAspectFitRect)
+                }
+            }
         }
         
         UIGraphicsEndPDFContext()
 
-        // Create filename with today's date
+        // Create filename with today's date and timestamp to ensure uniqueness
         let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let todayString = dateFormatter.string(from: Date())
-        let filename = "Photos_\(todayString).pdf"
+        dateFormatter.dateFormat = "yyyy-MM-dd_HHmmss"
+        let timestampString = dateFormatter.string(from: Date())
+        let filename = "Photos_\(timestampString)_\(selectedImages.count).pdf"
         
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         do {
