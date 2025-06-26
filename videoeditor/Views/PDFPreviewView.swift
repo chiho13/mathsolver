@@ -3,15 +3,30 @@ import QuickLook
 
 struct PDFPreviewView: UIViewControllerRepresentable {
     let url: URL
+    let isLandscape: Bool // Add isLandscape to react to orientation changes
+
+    init(url: URL, isLandscape: Bool) {
+        self.url = url
+        self.isLandscape = isLandscape
+    }
 
     func makeUIViewController(context: Context) -> QLPreviewController {
         let controller = QLPreviewController()
         controller.dataSource = context.coordinator
+        // Configure QLPreviewController for optimal display
+        controller.view.backgroundColor = .clear
+        controller.automaticallyAdjustsScrollViewInsets = true
         return controller
     }
 
     func updateUIViewController(_ uiViewController: QLPreviewController, context: Context) {
+        // Ensure the data source is up-to-date
+        context.coordinator.parent = self
+        uiViewController.dataSource = context.coordinator
+        // Force reload of the preview to reflect new URL or orientation
         uiViewController.reloadData()
+        // Trigger layout update to handle orientation changes
+        uiViewController.view.setNeedsLayout()
     }
 
     func makeCoordinator() -> Coordinator {
@@ -19,7 +34,7 @@ struct PDFPreviewView: UIViewControllerRepresentable {
     }
 
     class Coordinator: NSObject, QLPreviewControllerDataSource {
-        let parent: PDFPreviewView
+        var parent: PDFPreviewView
 
         init(parent: PDFPreviewView) {
             self.parent = parent
@@ -33,4 +48,4 @@ struct PDFPreviewView: UIViewControllerRepresentable {
             return parent.url as QLPreviewItem
         }
     }
-} 
+}

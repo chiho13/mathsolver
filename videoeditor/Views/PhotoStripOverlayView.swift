@@ -62,7 +62,9 @@ struct PhotoStripOverlayView: View {
                     }
                     .pickerStyle(.segmented)
                     .onChange(of: isLandscape) { _ in
-                        onOrientationChange()
+                        DispatchQueue.main.async {
+                            onOrientationChange()
+                        }
                     }
 
                     Button(action: {

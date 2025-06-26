@@ -36,7 +36,8 @@ struct ContentView: View {
                 
                 VStack(spacing: 0) {
                     if let pdfURL = pdfURL {
-                        PDFPreviewView(url: pdfURL)
+                        PDFPreviewView(url: pdfURL, isLandscape: isLandscape)
+                            .id("\(pdfURL.absoluteString)_\(isLandscape)")
                             .padding(.top, 10)
                             .padding(.bottom, showPhotoStrip ? 240 : 40)
                             .padding(.horizontal, 10)
