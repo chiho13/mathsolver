@@ -75,15 +75,15 @@ struct ContentView: View {
                 .animation(.easeInOut, value: pdfURL)
                 
                 // Sidebar overlay
-                if showSidebar, let searchHistory = searchHistory {
-                    SidebarView(
-                        showSidebar: $showSidebar,
-                        searchHistory: searchHistory,
-                        query: $query,
-                        searchOutput: $searchOutput
-                    )
-                    .zIndex(1)
-                }
+                // if showSidebar, let searchHistory = searchHistory {
+                //     SidebarView(
+                //         showSidebar: $showSidebar,
+                //         searchHistory: searchHistory,
+                //         query: $query,
+                //         searchOutput: $searchOutput
+                //     )
+                //     .zIndex(1)
+                // }
             }
             .overlay(alignment: .bottomTrailing) {
                 if !selectedImages.isEmpty {
@@ -164,27 +164,27 @@ struct ContentView: View {
                 PremiumView(headline: "paywall-title")
             }
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.1)) {
-                            showSidebar = true
-                        }
-                    }) {
-                        Image(systemName: "sidebar.left")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.blue)
-                            .shadow(color: Color.black.opacity(0.15), radius: 1, x: 0, y: 1)
-                            .contentShape(Rectangle())
-                            .padding(8)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.white.opacity(0.8))
-                                    .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                            )
-                    }
-                    .padding(.top, 8)
-                    .opacity(showSidebar ? 0 : 1)
-                }
+                // ToolbarItem(placement: .navigationBarLeading) {
+                //     Button(action: {
+                //         withAnimation(.easeInOut(duration: 0.1)) {
+                //             showSidebar = true
+                //         }
+                //     }) {
+                //         Image(systemName: "sidebar.left")
+                //             .font(.system(size: 16, weight: .medium))
+                //             .foregroundColor(.blue)
+                //             .shadow(color: Color.black.opacity(0.15), radius: 1, x: 0, y: 1)
+                //             .contentShape(Rectangle())
+                //             .padding(8)
+                //             .background(
+                //                 RoundedRectangle(cornerRadius: 8)
+                //                     .fill(Color.white.opacity(0.8))
+                //                     .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                //             )
+                //     }
+                //     .padding(.top, 8)
+                //     .opacity(showSidebar ? 0 : 1)
+                // }
                 
 
                 // Always show Upgrade button (in secondary position when PDF exists)
@@ -216,18 +216,18 @@ struct ContentView: View {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         HStack(spacing: 8) {
                             // Scroll to Bottom Button
-                            Button(action: {
-                                scrollToBottom = true
-                            }) {
-                                Image(systemName: "arrow.down.to.line")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.white)
-                                    .padding(8)
-                                    .background(
-                                        LinearGradient(gradient: Gradient(colors: [.green, .green.opacity(0.8)]), startPoint: .leading, endPoint: .trailing)
-                                    )
-                                    .cornerRadius(8)
-                            }
+                            // Button(action: {
+                            //     scrollToBottom = true
+                            // }) {
+                            //     Image(systemName: "arrow.down.to.line")
+                            //         .font(.system(size: 14, weight: .medium))
+                            //         .foregroundColor(.white)
+                            //         .padding(8)
+                            //         .background(
+                            //             LinearGradient(gradient: Gradient(colors: [.green, .green.opacity(0.8)]), startPoint: .leading, endPoint: .trailing)
+                            //         )
+                            //         .cornerRadius(8)
+                            // }
                             
                             // Share Button
                             ShareLink(item: pdfURL) {
