@@ -9,9 +9,20 @@ struct PhotoStripOverlayView: View {
     @Binding var isLandscape: Bool
     let onOrientationChange: () -> Void
     @State private var currentDraggingIndex: Int?
+    @State private var selectedImageIndex: Int?
 
     var body: some View {
         VStack(spacing: 12) {
+            Picker("Orientation", selection: $isLandscape) {
+                        Label("Portrait", systemImage: "rectangle.portrait").tag(false)
+                        Label("Landscape", systemImage: "rectangle.landscape").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: isLandscape) { _ in
+                        DispatchQueue.main.async {
+                            onOrientationChange()
+                        }
+                    }.padding(.horizontal)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     PhotosPicker(selection: $selectedPickerItems, matching: .images) {
@@ -26,28 +37,27 @@ struct PhotoStripOverlayView: View {
                     }
 
                     ForEach(selectedImages.indices, id: \.self) { index in
-                        ZStack(alignment: .topTrailing) {
-                            Image(uiImage: selectedImages[index])
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 80, height: 80)
-                                .cornerRadius(10)
-                                .onDrag {
-                                    self.currentDraggingIndex = index
-                                    return NSItemProvider(object: String(index) as NSString)
+                        Image(uiImage: selectedImages[index])
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 80, height: 80)
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .strokeBorder(selectedImageIndex == index ? .purple : Color.clear, lineWidth: 3)
+                            )
+                            .onTapGesture {
+                                if selectedImageIndex == index {
+                                    selectedImageIndex = nil
+                                } else {
+                                    selectedImageIndex = index
                                 }
-
-                            Button(action: {
-                                selectedImages.remove(at: index)
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.callout)
-                                    .foregroundColor(.white)
-                                    .background(Color.black.opacity(0.6).clipShape(Circle()))
                             }
-                            .offset(x: 5, y: -5)
-                        }
-                        .onDrop(of: [UTType.text], delegate: ImageDropDelegate(index: index, items: $selectedImages, currentDraggingIndex: $currentDraggingIndex))
+                            .onDrag {
+                                self.currentDraggingIndex = index
+                                return NSItemProvider(object: String(index) as NSString)
+                            }
+                            .onDrop(of: [UTType.text], delegate: ImageDropDelegate(index: index, items: $selectedImages, currentDraggingIndex: $currentDraggingIndex))
                     }
                 }
                 .padding()
@@ -56,23 +66,41 @@ struct PhotoStripOverlayView: View {
 
             if !selectedImages.isEmpty {
                 VStack(spacing: 12) {
-                    Picker("Orientation", selection: $isLandscape) {
-                        Label("Portrait", systemImage: "rectangle.portrait").tag(false)
-                        Label("Landscape", systemImage: "rectangle.landscape").tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: isLandscape) { _ in
-                        DispatchQueue.main.async {
-                            onOrientationChange()
-                        }
-                    }
+                    
 
-                    Button(action: {
-                        showResetConfirmation = true
-                    }) {
-                        Label("Remove All", systemImage: "trash")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(.red)
+                    if let selectedIndex = selectedImageIndex {
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                // TODO: Implement edit action
+                            }) {
+                                Label("Edit", systemImage: "pencil.circle")
+                                    .font(.subheadline.weight(.medium))
+                            }
+                            Spacer()
+                            Divider().frame(height: 20)
+                            Spacer()
+                            Button(action: {
+                                withAnimation {
+                                    selectedImages.remove(at: selectedIndex)
+                                    selectedImageIndex = nil
+                                }
+                            }) {
+                                Label("Remove", systemImage: "trash.circle")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundColor(.red)
+                            }
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity)
+                    } else {
+                        Button(action: {
+                            showResetConfirmation = true
+                        }) {
+                            Label("Remove All", systemImage: "trash")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(.red)
+                        }
                     }
                 }
                 .padding(.horizontal)
