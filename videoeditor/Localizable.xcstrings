@@ -149,6 +149,9 @@
         }
       }
     },
+    "Edit" : {
+
+    },
     "Error" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -173,6 +176,12 @@
           }
         }
       }
+    },
+    "Hide" : {
+
+    },
+    "Landscape" : {
+
     },
     "Language Settings" : {
       "extractionState" : "manual",
@@ -284,6 +293,9 @@
         }
       }
     },
+    "Orientation" : {
+
+    },
     "Payment will be charged to your Apple ID account at the confirmation of purchase. The subscription automatically renews unless it's canceled at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period. You can manage and cancel your subscription by going to your App Store account settings after purchase." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -301,7 +313,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Support for all language pairs"
+            "value" : "Supports 38 languages"
           }
         }
       }
@@ -312,7 +324,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Premium voice recognition accuracy"
+            "value" : "Unlimited Photo Recognition"
           }
         }
       }
@@ -323,7 +335,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ad-free experience"
+            "value" : "Unlimited AI Searches"
           }
         }
       }
@@ -345,10 +357,16 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unlimited real-time translations"
+            "value" : "Unlimited AI Searches"
           }
         }
       }
+    },
+    "PDF Reporter" : {
+
+    },
+    "Portrait" : {
+
     },
     "Privacy Policy." : {
 
@@ -370,6 +388,12 @@
         }
       }
     },
+    "Remove All" : {
+
+    },
+    "Remove All Photos?" : {
+
+    },
     "Restore" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -380,6 +404,9 @@
           }
         }
       }
+    },
+    "Restore Purchases" : {
+
     },
     "Search for places, news, or tips..." : {
       "extractionState" : "manual",
@@ -436,6 +463,12 @@
         }
       }
     },
+    "Select Photos" : {
+
+    },
+    "Share" : {
+
+    },
     "Start for Free" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -457,6 +490,9 @@
           }
         }
       }
+    },
+    "Tap to begin creating your PDF" : {
+
     },
     "Terms of Service" : {
 
@@ -505,10 +541,16 @@
         }
       }
     },
+    "This action cannot be undone." : {
+
+    },
     "This subscription automatically renews for %@ per week. You can cancel anytime. By subscribing, you agree to the" : {
 
     },
     "This subscription automatically renews for %@ per year after 7 day trial. You can cancel anytime. By subscribing, you agree to the" : {
+
+    },
+    "This subscription automatically renews for %@. Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase. \n\nTerms of Service & Privacy Policy apply." : {
 
     },
     "This will delete all search history" : {

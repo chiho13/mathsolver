@@ -124,40 +124,40 @@ struct OnboardingView: View {
                                 if pageIndex == 2 { // Language Selection Page
                                     
                                     
-                                    VStack(spacing: 32) {
-                                        Spacer()
-                                        HStack {
-                                            Spacer()
-                                            VStack(spacing: 16) {
-                                                
-                                                Image(systemName: "globe")
-                                                    .font(.system(size: 40))
-                                                    .foregroundColor(colorScheme == .dark ? Color.fromHex("#f7cbe3") : .accentColor)
-                                                    .frame(width: 40, alignment: .leading)
-                                                
-                                                Text("Choose language pairs")
-                                                    .font(.system(size: 20))
-                                                    .italic()
-                                                    .fontWeight(.bold)
-                                                    .padding(.top, 30)
-                                                    .padding(.bottom, 22)
-                                                    .padding(.horizontal, 24)
-                                                
-                                            }
-                                            Spacer()
-                                        }.padding(.top, 24)
-                                        
-                                        
-                                        Text("Their Language")
-                                            .font(.system(size: 20, weight: .semibold))
-                                            .foregroundColor(.primary.opacity(0.9))
-                                            .padding(.bottom, 4)
-                                        
-                                       
-                                        
-                                        Spacer()
-                                    }
-                                    .padding(.horizontal, 24)
+//                                    VStack(spacing: 32) {
+//                                        Spacer()
+//                                        HStack {
+//                                            Spacer()
+//                                            VStack(spacing: 16) {
+//                                                
+//                                                Image(systemName: "globe")
+//                                                    .font(.system(size: 40))
+//                                                    .foregroundColor(colorScheme == .dark ? Color.fromHex("#f7cbe3") : .accentColor)
+//                                                    .frame(width: 40, alignment: .leading)
+//                                                
+//                                                Text("Choose language pairs")
+//                                                    .font(.system(size: 20))
+//                                                    .italic()
+//                                                    .fontWeight(.bold)
+//                                                    .padding(.top, 30)
+//                                                    .padding(.bottom, 22)
+//                                                    .padding(.horizontal, 24)
+//                                                
+//                                            }
+//                                            Spacer()
+//                                        }.padding(.top, 24)
+//                                        
+//                                        
+//                                        Text("Their Language")
+//                                            .font(.system(size: 20, weight: .semibold))
+//                                            .foregroundColor(.primary.opacity(0.9))
+//                                            .padding(.bottom, 4)
+//                                        
+//                                       
+//                                        
+//                                        Spacer()
+//                                    }
+//                                    .padding(.horizontal, 24)
                                     
                                     
                                 }
@@ -434,10 +434,9 @@ struct OnboardingView: View {
 //            BulletPoint(iconName: "person.2.fill", text: "onboarding-page3-bulletpointtwo")
 //        ],
         // Page 4: Personalization (Language Selection)
-        [
-            // For language selection, you can either use a localized key or hardcode if it's not localized.
-            BulletPoint(iconName: "globe", text: "Choose language pairs")
-        ]
+//        [
+//            BulletPoint(iconName: "globe", text: "Choose language pairs")
+//        ]
     ]
 
 

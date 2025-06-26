@@ -30,7 +30,7 @@ struct SidebarView: View {
                 HStack(spacing: 0) {
                     VStack(alignment: .leading, spacing: 20) {
                         HStack {
-                            Text("The Local Finder")
+                            Text("PDF Reporter")
                                 .font(.title2)
                                 .fontWeight(.bold)
                             Spacer()

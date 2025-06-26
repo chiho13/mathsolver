@@ -93,7 +93,7 @@ struct LegacyOnboardingPremiumView: View {
                         }
                         
                         .padding(.bottom, isSmallScreen ? 20 : 0) // Add padding for small screens
-                        
+                            
                 }
                 
                 

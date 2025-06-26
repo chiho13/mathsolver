@@ -25,17 +25,17 @@ struct PaywallView: View {
                 VStack(spacing: 32) {
                     Spacer().frame(height: 240) // Push below hero
 
-                    BenefitsView()
+                    BenefitsView(selectedPlan: $vm.selectedPlan)
 
                     PlanCardsSection(selectedPlan: $vm.selectedPlan)
 
-                    ContinueButton(isDisabled: vm.isPurchasing) {
-                        Task { await vm.purchase(iap: iap) }
-                    }
+                    ContinueButton(action: {
+                        await vm.purchase(iap: iap)
+                    }, isDisabled: vm.isPurchasing, selectedPlan: vm.selectedPlan)
 
-                    AuxButtonsBar(isDisabled: vm.isPurchasing) {
+                    AuxButtonsBar(isDisabled: vm.isPurchasing, restoreAction: {
                         Task { await vm.restore(iap: iap) }
-                    }
+                    })
 
                     LegalTextView(selectedPlan: vm.selectedPlan)
                         .padding(.bottom, 24)
@@ -52,14 +52,7 @@ struct PaywallView: View {
             }
             .padding(.trailing, 16)
             .padding(.top, 8)
-            .opacity(showCloseImmediately ? 1 : 0)
-            .onAppear {
-                guard !showCloseImmediately else { return }
-                // Fade-in after slight delay
-                withAnimation(.easeIn(duration: 1.0).delay(0.8)) {
-                    // toggling via state would require extra @State; simplest: use opacity anim.
-                }
-            }
+           
         }
         .alert(item: $vm.activeAlert) { alert in
             switch alert {
@@ -103,29 +96,29 @@ private struct HeaderView: View {
         }
     }
 }
-
-private struct BenefitsView: View {
-    private let benefits: [String] = ["paywall-bulletpointone", "paywall-bulletpointtwo", "paywall-bulletpointhree", "paywall-bulletpointfour"]
-    var body: some View {
-        VStack(spacing: 14) {
-            ForEach(benefits, id: \.self) { key in
-                HStack(spacing: 12) {
-                    Image(systemName: "sparkles")
-                        .foregroundColor(.accentColor)
-                    Text(LocalizedStringKey(key))
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer()
-                }
-            }
-        }
-        .padding()
-        .background(Color.primary.opacity(0.05))
-        .cornerRadius(16)
-        .padding(.horizontal)
-    }
-}
+//
+//private struct BenefitsView: View {
+//    private let benefits: [String] = ["paywall-bulletpointone", "paywall-bulletpointtwo", "paywall-bulletpointhree", "paywall-bulletpointfour"]
+//    var body: some View {
+//        VStack(spacing: 14) {
+//            ForEach(benefits, id: \.self) { key in
+//                HStack(spacing: 12) {
+//                    Image(systemName: "sparkles")
+//                        .foregroundColor(.accentColor)
+//                    Text(LocalizedStringKey(key))
+//                        .font(.subheadline)
+//                        .foregroundColor(.primary)
+//                        .fixedSize(horizontal: false, vertical: true)
+//                    Spacer()
+//                }
+//            }
+//        }
+//        .padding()
+//        .background(Color.primary.opacity(0.05))
+//        .cornerRadius(16)
+//        .padding(.horizontal)
+//    }
+//}
 
 private struct PlanCardsSection: View {
     @Binding var selectedPlan: SubscriptionPlan
@@ -185,31 +178,32 @@ private struct PlanCard: View {
                     .stroke(isSelected ? Color.accentColor : Color.secondary, lineWidth: 2)
             )
             .cornerRadius(12)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 }
 
-private struct ContinueButton: View {
-    let isDisabled: Bool
-    let action: () -> Void
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Spacer()
-                Text("Continue").font(.headline).foregroundColor(.white)
-                Image(systemName: "chevron.right").foregroundColor(.white)
-                Spacer()
-            }
-            .padding()
-            .background(Color.accentColor)
-            .cornerRadius(12)
-        }
-        .disabled(isDisabled)
-        .opacity(isDisabled ? 0.6 : 1)
-        .padding(.horizontal)
-    }
-}
+//private struct ContinueButton: View {
+//    let isDisabled: Bool
+//    let action: () -> Void
+//    var body: some View {
+//        Button(action: action) {
+//            HStack {
+//                Spacer()
+//                Text("Continue").font(.headline).foregroundColor(.white)
+//                Image(systemName: "chevron.right").foregroundColor(.white)
+//                Spacer()
+//            }
+//            .padding()
+//            .background(Color.accentColor)
+//            .cornerRadius(12)
+//        }
+//        .disabled(isDisabled)
+//        .opacity(isDisabled ? 0.6 : 1)
+//        .padding(.horizontal)
+//    }
+//}
 
 private struct AuxButtonsBar: View {
     let isDisabled: Bool

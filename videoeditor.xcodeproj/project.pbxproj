@@ -415,7 +415,7 @@
 				DEVELOPMENT_TEAM = CYL68JMKHB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.trivia-games";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs access to your camera to import and edit videos.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to provide you with relevant information.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "This app needs permission to save edited videos to your photo library.";
@@ -430,7 +430,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.anthonyho.videoeditor.videoeditor;
+				PRODUCT_BUNDLE_IDENTIFIER = com.anthonyho.videoeditor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -448,7 +448,7 @@
 				DEVELOPMENT_TEAM = CYL68JMKHB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_LSApplicationCategoryType = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.trivia-games";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs access to your camera to import and edit videos.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to provide you with relevant information.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "This app needs permission to save edited videos to your photo library.";
@@ -463,7 +463,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.anthonyho.videoeditor.videoeditor;
+				PRODUCT_BUNDLE_IDENTIFIER = com.anthonyho.videoeditor;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
