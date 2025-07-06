@@ -25,6 +25,7 @@ struct ContentView: View {
     @State private var showPhotoStrip = false
     @State private var photosPerPage = 1
     @State private var scrollToBottom = false
+    @State private var addTextMode = false
 
     var body: some View {
         NavigationView {
@@ -38,12 +39,17 @@ struct ContentView: View {
                 
                 VStack(spacing: 0) {
                     if let pdfURL = pdfURL {
-                        PDFPreviewView(url: pdfURL, isLandscape: isLandscape, shouldScrollToBottom: $scrollToBottom)
-                            .id("\(pdfURL.absoluteString)_\(isLandscape)_\(photosPerPage)_\(selectedImages.count)")
-                            .padding(.top, 10)
-                            .padding(.bottom, showPhotoStrip ? 290 : 40)
-                            .padding(.horizontal, 10)
-                            .animation(.easeInOut(duration: 0.3), value: showPhotoStrip)
+                        PDFAnnotationView(url: pdfURL, addTextMode: $addTextMode) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showPhotoStrip = false
+                            }
+                        }
+                        .id("\(pdfURL.absoluteString)_\(isLandscape)_\(photosPerPage)_\(selectedImages.count)")
+                        .padding(.top, 10)
+                        .padding(.bottom, showPhotoStrip ? 290 : 40)
+                        .padding(.horizontal, 10)
+                        .animation(.easeInOut(duration: 0.3), value: showPhotoStrip)
+                        .ignoresSafeArea(.keyboard)
                     } else if let errorMessage = errorMessage {
                         VStack {
                             Spacer()
@@ -123,6 +129,28 @@ struct ContentView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
+            // Bottom-leading annotation toggle (opposite the Edit/Hide button)
+            // .overlay(alignment: .bottomLeading) {
+            //     if pdfURL != nil {
+            //         Button(action: {
+            //             addTextMode.toggle()
+            //         }) {
+            //             HStack {
+            //                 Image(systemName: addTextMode ? "pencil.slash" : "pencil")
+            //                 Text(addTextMode ? "Done" : "Annotate")
+            //             }
+            //             .padding(.horizontal, 12)
+            //             .padding(.vertical, 8)
+            //             .background(addTextMode ? Color.orange.opacity(0.8) : Color.orange)
+            //             .foregroundColor(.white)
+            //             .cornerRadius(20)
+            //             .shadow(radius: 4)
+            //         }
+            //         .padding()
+            //         .padding(.bottom, showPhotoStrip ? 270 : 20)
+            //         .animation(.easeInOut(duration: 0.3), value: showPhotoStrip)
+            //     }
+            // }
             .ignoresSafeArea(.container, edges: .bottom)
             .onAppear {
                 if searchHistory == nil {
@@ -215,20 +243,6 @@ struct ContentView: View {
                 if let pdfURL = pdfURL {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         HStack(spacing: 8) {
-                            // Scroll to Bottom Button
-                            // Button(action: {
-                            //     scrollToBottom = true
-                            // }) {
-                            //     Image(systemName: "arrow.down.to.line")
-                            //         .font(.system(size: 14, weight: .medium))
-                            //         .foregroundColor(.white)
-                            //         .padding(8)
-                            //         .background(
-                            //             LinearGradient(gradient: Gradient(colors: [.green, .green.opacity(0.8)]), startPoint: .leading, endPoint: .trailing)
-                            //         )
-                            //         .cornerRadius(8)
-                            // }
-                            
                             // Share Button
                             ShareLink(item: pdfURL) {
                                 HStack(spacing: 4) {

@@ -197,15 +197,15 @@ struct PhotoStripOverlayView: View {
 
                     if let selectedIndex = selectedImageIndex {
                         HStack {
-                            Spacer()
-                            Button(action: {
-                                // TODO: Implement edit action
-                            }) {
-                                Label("Edit", systemImage: "pencil.circle")
-                                    .font(.subheadline.weight(.medium))
-                            }
-                            Spacer()
-                            Divider().frame(height: 20)
+//                            Spacer()
+//                            Button(action: {
+//                                // TODO: Implement edit action
+//                            }) {
+//                                Label("Edit", systemImage: "pencil.circle")
+//                                    .font(.subheadline.weight(.medium))
+//                            }
+//                            Spacer()
+//                            Divider().frame(height: 20)
                             Spacer()
                             Button(action: {
                                 withAnimation {
