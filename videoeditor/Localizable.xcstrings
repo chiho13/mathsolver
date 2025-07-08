@@ -83,6 +83,9 @@
         }
       }
     },
+    "billed annually" : {
+
+    },
     "Cancel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -147,6 +150,9 @@
     "Create New Project" : {
 
     },
+    "Create professional PDFs from your photos" : {
+
+    },
     "Delete" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -190,6 +196,9 @@
         }
       }
     },
+    "Everything You Need" : {
+
+    },
     "Free: Up to %lld photos" : {
 
     },
@@ -206,6 +215,9 @@
           }
         }
       }
+    },
+    "Join thousands of users who create professional PDFs every day" : {
+
     },
     "Landscape" : {
 
@@ -361,6 +373,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "All layout options"
+          }
+        }
+      }
+    },
+    "paywall-bulletpointone" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unlimited photos per PDF"
           }
         }
       }
@@ -549,6 +572,9 @@
         }
       }
     },
+    "Start Now" : {
+
+    },
     "Success" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -619,7 +645,7 @@
     "This subscription automatically renews for %@ per year after 7 day trial. You can cancel anytime. By subscribing, you agree to the" : {
 
     },
-    "This subscription automatically renews for %@. Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase." : {
+    "This subscription automatically renews for %@ per year. Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase." : {
 
     },
     "This will delete all search history" : {

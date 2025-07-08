@@ -22,14 +22,14 @@ enum SubscriptionPlan: String, CaseIterable, Identifiable {
         case .yearly:
             return "Annual PRO"
         }
-        
-        var subtitle: String {
-            switch self {
-            case .weekly:
-                return ""
-            case .yearly:
-                return ""
-            }
+    }
+    
+    var subtitle: String {
+        switch self {
+        case .weekly:
+            return "Perfect for short-term projects"
+        case .yearly:
+            return "Best value - save 70%"
         }
     }
 }

@@ -16,22 +16,20 @@ struct PaywallView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            // Hero / header background
-            HeaderView()
-                .frame(maxHeight: 260)
-                .edgesIgnoringSafeArea(.top)
-
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 32) {
-                    Spacer().frame(height: 240) // Push below hero
+                VStack(spacing: 28) {
+                    Spacer().frame(height: 120) // Reduced spacer to allow content under header
 
-                    BenefitsView(selectedPlan: $vm.selectedPlan)
+                    PaywallBenefitsView()
+                    .padding(.top, 100)
+                    
+                    ValuePropositionView()
 
-                    PlanCardsSection()
+                    PlanCardSection()
 
-                    ContinueButton(action: {
+                    PaywallContinueButton(action: {
                         await vm.purchase(iap: iap)
-                    }, isDisabled: vm.isPurchasing, selectedPlan: vm.selectedPlan)
+                    }, isDisabled: vm.isPurchasing)
 
                     AuxButtonsBar(isDisabled: vm.isPurchasing, restoreAction: {
                         Task { await vm.restore(iap: iap) }
@@ -41,6 +39,11 @@ struct PaywallView: View {
                         .padding(.bottom, 24)
                 }
             }
+            
+            // Hero / header background - now overlays the scroll content
+            HeaderView()
+                .frame(maxHeight: 250)
+                .edgesIgnoringSafeArea(.top)
 
             // Close button
             Button(action: onClose) {
@@ -86,65 +89,98 @@ private struct HeaderView: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                gradient: Gradient(colors: cs == .dark ? [Color.fromHex("#4430f2"), Color.fromHex("#2d1dd8")] : [Color.accentColor, Color.accentColor.opacity(0.6)]),
+                gradient: Gradient(colors: cs == .dark ? [Color.fromHex("#4430f2"), Color.fromHex("#2d1dd8"), Color.fromHex("#1a0f7a")] : [Color.accentColor, Color.accentColor.opacity(0.8), Color.accentColor.opacity(0.6)]),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            VStack(spacing: 16) {
-                Image("icon100")
+            VStack(spacing: 20) {
+                Image("appicon")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 100, height: 100)
                     .cornerRadius(20)
-                Text(NSLocalizedString("paywall-title", comment: ""))
-                    .font(.largeTitle.bold())
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(LinearGradient(colors: [.white, .white.opacity(0.8)], startPoint: .top, endPoint: .bottom))
+                    .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
+                
+                VStack(spacing: 8) {
+                    Text(NSLocalizedString("paywall-title", comment: ""))
+                        .font(.system(size: 28, weight: .bold))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(LinearGradient(colors: [.white, .white.opacity(0.9)], startPoint: .top, endPoint: .bottom))
+                    
+                    Text("Create professional PDFs from your photos")
+                        .font(.system(size: 16, weight: .medium))
+                        .multilineTextAlignment(.center)
+                        .foregroundColor(.white.opacity(0.8))
+                }
             }
-            .padding(.top, 60)
+            .padding(.top, 20)
         }
     }
 }
-//
-//private struct BenefitsView: View {
-//    private let benefits: [String] = ["paywall-bulletpointone", "paywall-bulletpointtwo", "paywall-bulletpointhree", "paywall-bulletpointfour"]
-//    var body: some View {
-//        VStack(spacing: 14) {
-//            ForEach(benefits, id: \.self) { key in
-//                HStack(spacing: 12) {
-//                    Image(systemName: "sparkles")
-//                        .foregroundColor(.accentColor)
-//                    Text(LocalizedStringKey(key))
-//                        .font(.subheadline)
-//                        .foregroundColor(.primary)
-//                        .fixedSize(horizontal: false, vertical: true)
-//                    Spacer()
-//                }
-//            }
-//        }
-//        .padding()
-//        .background(Color.primary.opacity(0.05))
-//        .cornerRadius(16)
-//        .padding(.horizontal)
-//    }
-//}
 
-private struct PlanCardsSection: View {
+private struct PaywallBenefitsView: View {
+    private let benefits: [String] = ["paywall-bulletpointone", "paywall-bulletpointhree", "paywall-bulletpointfour"]
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            ForEach(benefits, id: \.self) { key in
+                HStack(spacing: 16) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.green)
+                        .frame(width: 24, height: 24)
+                    
+                    Text(LocalizedStringKey(key))
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.horizontal, 4)
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 20)
+        .padding(.bottom, 20)
+        .background(Color.primary.opacity(0.03))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+        )
+        .padding(.horizontal, 20)
+    }
+}
+
+private struct ValuePropositionView: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("Everything You Need")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.primary)
+            
+            Text("Join thousands of users who create professional PDFs every day")
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 20)
+    }
+}
+
+private struct PlanCardSection: View {
     @EnvironmentObject private var iap: IAPManager
 
     var body: some View {
         VStack(spacing: 16) {
-            PlanCard(title: "Annual PRO",
-                     priceText: "\(iap.priceText(for: .yearly))/year",
-                     badge: nil)
-
-            // PlanCard(title: "Weekly PRO",
-            //          priceText: "\(iap.priceText(for: .weekly))/week",
-            //          badge: nil,
-            //          isSelected: selectedPlan == .weekly,
-            //          onSelect: { selectedPlan = .weekly })
+            PlanCard(
+                title: "Annual PRO",
+                priceText: "\(iap.priceText(for: .yearly))/year",
+                badge: "BEST VALUE",
+                subtitle: "Full access to all features"
+            )
         }
-        .padding(.horizontal)
+        .padding(.horizontal, 20)
     }
 }
 
@@ -152,55 +188,116 @@ private struct PlanCard: View {
     let title: String
     let priceText: String
     let badge: String?
+    let subtitle: String
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.headline)
-                Text(priceText).font(.subheadline)
-            }
-            Spacer()
-            if let badge {
-                Text(badge)
-                    .font(.caption.bold())
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(Color.red)
-                    .foregroundColor(.white)
-                    .clipShape(Capsule())
+        VStack(spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(title)
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        if let badge {
+                            Text(badge)
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 4)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [Color.orange, Color.red]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .clipShape(Capsule())
+                        }
+                    }
+                    
+                    Text(subtitle)
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                    
+                    HStack(alignment: .bottom, spacing: 4) {
+                        Text(priceText)
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(.accentColor)
+                        
+                        Text("billed annually")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                            .offset(y: -2)
+                    }
+                }
+                
+                Spacer()
             }
         }
-        .padding()
+        .padding(24)
         .frame(maxWidth: .infinity)
-        .background(Color.accentColor.opacity(0.1))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.accentColor, lineWidth: 2)
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [Color.accentColor.opacity(0.05), Color.accentColor.opacity(0.1)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
         )
-        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(
+                    LinearGradient(
+                        gradient: Gradient(colors: [Color.accentColor, Color.accentColor.opacity(0.6)]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 2
+                )
+        )
+        .cornerRadius(16)
+        .shadow(color: .accentColor.opacity(0.2), radius: 8, x: 0, y: 4)
     }
 }
 
-//private struct ContinueButton: View {
-//    let isDisabled: Bool
-//    let action: () -> Void
-//    var body: some View {
-//        Button(action: action) {
-//            HStack {
-//                Spacer()
-//                Text("Continue").font(.headline).foregroundColor(.white)
-//                Image(systemName: "chevron.right").foregroundColor(.white)
-//                Spacer()
-//            }
-//            .padding()
-//            .background(Color.accentColor)
-//            .cornerRadius(12)
-//        }
-//        .disabled(isDisabled)
-//        .opacity(isDisabled ? 0.6 : 1)
-//        .padding(.horizontal)
-//    }
-//}
+private struct PaywallContinueButton: View {
+    let action: () async -> Void
+    let isDisabled: Bool
+    
+    var body: some View {
+        Button(action: {
+            Task { await action() }
+        }) {
+            HStack {
+                Spacer()
+                Text("Start Now")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            .frame(height: 56)
+            .background(
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.accentColor, Color.accentColor.opacity(0.8)]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(12)
+            .shadow(color: .accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
+        }
+        .disabled(isDisabled)
+        .opacity(isDisabled ? 0.6 : 1)
+        .scaleEffect(isDisabled ? 0.98 : 1.0)
+        .animation(.easeInOut(duration: 0.1), value: isDisabled)
+        .padding(.horizontal, 20)
+    }
+}
 
 private struct AuxButtonsBar: View {
     let isDisabled: Bool
@@ -208,10 +305,11 @@ private struct AuxButtonsBar: View {
     var body: some View {
         HStack(spacing: 24) {
             Button("Restore Purchases", action: restoreAction)
-                .font(.footnote)
+                .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.gray)
                 .disabled(isDisabled)
         }
+        .padding(.top, 8)
     }
 }
 
@@ -220,21 +318,21 @@ private struct LegalTextView: View {
     @EnvironmentObject private var iap: IAPManager
     var body: some View {
         let price = iap.priceText(for: selectedPlan)
-        VStack(spacing: 8) {
-            Text("This subscription automatically renews for \(price). Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase.")
-                .font(.footnote)
+        VStack(spacing: 12) {
+            Text("This subscription automatically renews for \(price) per year. Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase.")
+                .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
+                .padding(.horizontal, 20)
             
-            HStack(spacing: 16) {
+            HStack(spacing: 20) {
                 Link("Terms of Service", destination: URL(string: "https://verby.co/phototopdf")!)
-                    .font(.footnote)
-                    .foregroundColor(.blue)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.accentColor)
                 
                 Link("Privacy Policy", destination: URL(string: "https://verby.co/phototopdf/privacy")!)
-                    .font(.footnote)
-                    .foregroundColor(.blue)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.accentColor)
             }
         }
     }
