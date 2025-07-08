@@ -15,6 +15,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 
 struct LegacyOnboardingPremiumView: View {
@@ -157,52 +158,6 @@ struct LegacyOnboardingPremiumView: View {
                         closeButtonOpacity = 1.0
                     }
                 }
-            }
-            .sheet(isPresented: $showPreviewCreditsSheet) {
-                VStack(alignment: .leading) {
-                    
-                    Text("Try Ekto for \(creditsLeft) credits for free")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.primary)
-                        .padding([.vertical, .horizontal])
-                    
-                    Text("30-second limit per session")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                        .padding([.horizontal])
-                    
-                    HStack(alignment: .center, spacing: 0) {
-                        Text("By continuing you agree to our ")
-                            .font(.footnote)
-                            .foregroundColor(.gray)
-                        
-                        Text(" terms")
-                            .font(.footnote)
-                            .foregroundColor(.blue)
-                            .underline()
-                            .onTapGesture {
-                                openURL("http://verby.co/ekto/terms")
-                            }
-                        
-                        Text(" and ")
-                            .font(.footnote)
-                            .foregroundColor(.gray)
-                        
-                        Text(" privacy policy.")
-                            .font(.footnote)
-                            .foregroundColor(.blue)
-                            .underline()
-                            .onTapGesture {
-                                openURL("http://verby.co/ekto/privacy")
-                            }
-                    }
-                    .multilineTextAlignment(.center)
-                    .padding([.horizontal])
-                    .padding(.vertical, 10)
-                    
-                    GetStarted(showPremView: $showPremView)
-                }
-                .presentationDetents([.height(250)])
             }
             .alert(item: $activeAlert) { alertType in
                 switch alertType {
@@ -381,14 +336,16 @@ struct BenefitsView: View {
         VStack(alignment: .leading, spacing: 16) {
 //            BenefitItem(text: "paywall-bulletpointone", selectedPlan: selectedPlan)
             
-            if selectedPlan == .yearly {
-                BenefitItem(text: "paywall-twohours", selectedPlan: selectedPlan)
-            } else {
-                BenefitItem(text: "paywall-bulletpointtwo", selectedPlan: selectedPlan)
-            }
+//            if selectedPlan == .yearly {
+//                BenefitItem(text: "paywall-twohours", selectedPlan: selectedPlan)
+//            } else {
+//                BenefitItem(text: "paywall-bulletpointtwo", selectedPlan: selectedPlan)
+//            }
+            
+            BenefitItem(text: "paywall-twohours", selectedPlan: selectedPlan)
           
             BenefitItem(text: "paywall-bulletpointhree", selectedPlan: selectedPlan)
-            BenefitItem(text: "paywall-bulletpointfour", selectedPlan: selectedPlan)
+//            BenefitItem(text: "paywall-bulletpointfour", selectedPlan: selectedPlan)
         }
         .padding(.vertical, 20)
     }
@@ -732,7 +689,7 @@ struct PlanSelectionRow: View {
 
 
 
-    private func calculateDiscountText(oldPrice: String?, newPrice: String?) -> String? {
+    func calculateDiscountText(oldPrice: String?, newPrice: String?) -> String? {
     guard let oldPrice = oldPrice, let newPrice = newPrice,
           let oldPriceValue = extractNumericValue(from: oldPrice),
           let newPriceValue = extractNumericValue(from: newPrice) else {
@@ -743,7 +700,7 @@ struct PlanSelectionRow: View {
     return String(format: "SAVE %.0f%%", discount)
 }
 
-private func extractNumericValue(from priceString: String) -> Double? {
+func extractNumericValue(from priceString: String) -> Double? {
     // Use a regular expression to find numbers and decimal points
     let regex = try? NSRegularExpression(pattern: "[0-9]+(?:\\.[0-9]+)?", options: [])
     let nsString = priceString as NSString
@@ -777,7 +734,7 @@ struct ContinueButton: View {
         private var buttonText: String {
         switch selectedPlan {
         case .yearly:
-            return "Start for Free" // Updated to match 3-day trial
+            return "Continue" // Updated to match 3-day trial
 
         default:
             return "Continue"

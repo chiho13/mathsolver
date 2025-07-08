@@ -22,6 +22,7 @@ class IAPManager: ObservableObject {
     @Published var products: [StoreKit.Product] = []
     @Published var isPremium: Bool = false
     @Published var activePlan: SubscriptionPlan?  // Add this property
+    @Published var didCheckPremium: Bool = false
     
     // Dictionary to map SubscriptionPlan to StoreKit.Product
     var planProducts: [SubscriptionPlan: StoreKit.Product] = [:]
@@ -55,6 +56,7 @@ class IAPManager: ObservableObject {
     // Fetch both the subscription and lifetime products
     func fetchProducts() async {
         let productIDs = SubscriptionPlan.allCases.map { $0.rawValue }
+        print("Requesting products with IDs: \(productIDs)")
         do {
             let fetchedProducts = try await StoreKit.Product.products(for: productIDs)
             self.products = fetchedProducts
@@ -64,6 +66,14 @@ class IAPManager: ObservableObject {
             for product in fetchedProducts {
                 if let plan = SubscriptionPlan.allCases.first(where: { $0.rawValue == product.id }) {
                     planProducts[plan] = product
+                    print("Mapped \(plan.displayName) to product: \(product.id)")
+                }
+            }
+            
+            // Debug: Check which plans are missing
+            for plan in SubscriptionPlan.allCases {
+                if planProducts[plan] == nil {
+                    print("⚠️ WARNING: No product found for \(plan.displayName) (ID: \(plan.rawValue))")
                 }
             }
         } catch {
@@ -136,14 +146,24 @@ class IAPManager: ObservableObject {
         }
         isPremium = premium
         activePlan = currentPlan
+        didCheckPremium = true
         print("Premium status: \(isPremium)")
         print("Premium status: \(isPremium), Active Plan: \(currentPlan?.displayName ?? "None")")
     }
 
     func priceText(for plan: SubscriptionPlan) -> String {
-    guard let product = planProducts[plan] else { return "" }
-    // Format the price with localized currency
-    return product.price.formatted(product.priceFormatStyle)
+        guard let product = planProducts[plan] else { 
+            print("⚠️ No product found for \(plan.displayName) (ID: \(plan.rawValue))")
+            print("Available products: \(planProducts.keys.map { $0.displayName })")
+            return "Loading..." // Return loading text instead of empty string
+        }
+        // Format the price with localized currency
+        return product.price.formatted(product.priceFormatStyle)
+    }
+    
+    // Helper method to check if products are loaded
+    var areProductsLoaded: Bool {
+        return !planProducts.isEmpty
     }
     
 //    func getPrice(for plan: SubscriptionPlan) -> Decimal? {

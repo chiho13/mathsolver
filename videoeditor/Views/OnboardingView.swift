@@ -291,18 +291,7 @@ struct OnboardingView: View {
                             endPoint: .bottom
                         )
                 )
-        .alert(isPresented: $showSettingsAlert) {
-            Alert(
-                title: Text("Microphone Access Needed"),
-                message: Text("To enable real-time translation, we need access to your microphone. Please enable microphone access in Settings to use this feature."),
-                primaryButton: .default(Text("Open Settings")) {
-                    if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-                        UIApplication.shared.open(settingsURL, options: [:], completionHandler: nil)
-                    }
-                },
-                secondaryButton: .cancel()
-            )
-        }
+
     }
 
     // MARK: - Subviews
@@ -333,29 +322,24 @@ struct OnboardingView: View {
         }
     }
     }
-    /// "Continue" button that appears on the last page after microphone access is granted
+    /// "Continue" button that appears on the last page
     @ViewBuilder
     private func ContinueButton(isFirstLaunch: Binding<Bool>) -> some View {
         Button(action: {
+            withAnimation {
+                viewOffset = -UIScreen.main.bounds.width // Slide the view to the left
+            }
             
-            Task {
-//                await requestMicrophonePermission()
-                
+            if iapManager.isPremium {
+                showPremView = false
+            } else {
+                showPremView = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 withAnimation {
-                    viewOffset = -UIScreen.main.bounds.width // Slide the view to the left
-                }
-                
-                if iapManager.isPremium {
-                    showPremView = false
-                } else {
-                    showPremView = true
-                }
-                
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    withAnimation {
-                        isFirstLaunch.wrappedValue = false
-                        UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
-                    }
+                    isFirstLaunch.wrappedValue = false
+                    UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
                 }
             }
         }) {
@@ -417,14 +401,14 @@ struct OnboardingView: View {
         // Page 1: Core benefits
         [
             // Use localized keys that match your JSON file
-            BulletPoint(iconName: "star.fill", text: "onboarding-page1"),
-            BulletPoint(iconName: "mic.fill", text: "onboarding-page1-bulletpointone"),
-            BulletPoint(iconName: "person.wave.2", text: "onboarding-page1-bulletpointtwo")
+            BulletPoint(iconName: "doc.fill", text: "onboarding-page1"),
+            BulletPoint(iconName: "rectangle.grid.2x2.fill", text: "onboarding-page1-bulletpointone"),
+            BulletPoint(iconName: "rotate.right.fill", text: "onboarding-page1-bulletpointtwo")
         ],
-        // Page 2: Live event benefits
+        // Page 2: Sharing and output benefits
         [
-            BulletPoint(iconName: "bubble.left.and.bubble.right.fill", text: "onboarding-page2"),
-            BulletPoint(iconName: "person.2.fill", text: "onboarding-page2-bulletpointtwo"),
+            BulletPoint(iconName: "square.and.arrow.up.fill", text: "onboarding-page2"),
+            BulletPoint(iconName: "icloud.and.arrow.up.fill", text: "onboarding-page2-bulletpointtwo"),
 //            BulletPoint(iconName: "briefcase.fill", text: "onboarding-page2-bulletpointone"),
         ],
         // Page 3: Education & language learning

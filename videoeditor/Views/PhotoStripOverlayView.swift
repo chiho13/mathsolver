@@ -3,6 +3,7 @@ import PhotosUI
 import UniformTypeIdentifiers
 
 struct PhotoStripOverlayView: View {
+    @EnvironmentObject var iapManager: IAPManager
     @Binding var selectedPickerItems: [PhotosPickerItem]
     @Binding var selectedImages: [UIImage]
     @Binding var showResetConfirmation: Bool
@@ -14,6 +15,9 @@ struct PhotoStripOverlayView: View {
     @State private var currentDraggingIndex: Int?
     @State private var selectedImageIndex: Int?
     @State private var localPickerItems: [PhotosPickerItem] = []
+    @State private var showPhotoLimitAlert = false
+
+    private let freeLimit = 3
 
     var body: some View {
         VStack(spacing: 12) {
@@ -41,7 +45,7 @@ struct PhotoStripOverlayView: View {
                 
                 Rectangle()
                     .fill(Color.secondary.opacity(0.3))
-                    .frame(width: 1, height: 32)
+                    .frame(width: 1, height: 34)
                 
                 Button(action: {
                     if photosPerPage != 2 {
@@ -65,7 +69,7 @@ struct PhotoStripOverlayView: View {
                 
                 Rectangle()
                     .fill(Color.secondary.opacity(0.3))
-                    .frame(width: 1, height: 32)
+                    .frame(width: 1, height: 34)
                 
                 Button(action: {
                     if photosPerPage != 4 {
@@ -134,9 +138,12 @@ struct PhotoStripOverlayView: View {
                 .clipShape(RoundedCorners(radius: 8, corners: [.topRight, .bottomRight]))
             }
             .padding(.horizontal)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    PhotosPicker(selection: $localPickerItems, matching: .images) {
+            HStack(spacing: 12) {
+                ZStack {
+                    PhotosPicker(
+                        selection: $localPickerItems,
+                        matching: .images
+                    ) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(Color.white.opacity(0.4))
@@ -146,50 +153,90 @@ struct PhotoStripOverlayView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    .onChange(of: localPickerItems) { newItems in
-                        Task {
-                            for item in newItems {
-                                if let data = try? await item.loadTransferable(type: Data.self),
-                                   let uiImage = UIImage(data: data) {
-                                    await MainActor.run {
-                                        selectedImages.append(uiImage)
-                                    }
-                                }
-                            }
-                            await MainActor.run {
-                                localPickerItems = []
-                                onPhotosAdded()
-                            }
-                        }
-                    }
 
-                    ForEach(selectedImages.indices, id: \.self) { index in
-                        Image(uiImage: selectedImages[index])
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 80, height: 80)
-                            .cornerRadius(10)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .strokeBorder(selectedImageIndex == index ? .purple : Color.clear, lineWidth: 3)
-                            )
-                            .onTapGesture {
-                                if selectedImageIndex == index {
-                                    selectedImageIndex = nil
-                                } else {
-                                    selectedImageIndex = index
-                                }
-                            }
-                            .onDrag {
-                                self.currentDraggingIndex = index
-                                return NSItemProvider(object: String(index) as NSString)
-                            }
-                            .onDrop(of: [UTType.text], delegate: ImageDropDelegate(index: index, items: $selectedImages, currentDraggingIndex: $currentDraggingIndex))
+                    if !iapManager.isPremium && selectedImages.count >= freeLimit {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.black.opacity(0.6))
+                        Image(systemName: "lock.fill")
+                            .font(.largeTitle)
+                            .foregroundColor(.white)
                     }
                 }
-                .padding()
+                .frame(width: 80, height: 80)
+                .alert("Photo Limit Reached", isPresented: $showPhotoLimitAlert) {
+                    Button("OK") {}
+                } message: {
+                    Text("The free version allows up to \(freeLimit) photos. Please upgrade for unlimited photos.")
+                }
+                .onChange(of: localPickerItems) { newItems in
+                    Task {
+                        let availableSlots = iapManager.isPremium ? Int.max : freeLimit - selectedImages.count
+                        guard availableSlots > 0 else {
+                            await MainActor.run {
+                                localPickerItems = []
+                                showPhotoLimitAlert = true
+                            }
+                            return
+                        }
+
+                        let itemsToProcess = Array(newItems.prefix(availableSlots))
+
+                        if !iapManager.isPremium && newItems.count > itemsToProcess.count {
+                            await MainActor.run {
+                                showPhotoLimitAlert = true
+                            }
+                        }
+
+                        for item in itemsToProcess {
+                            if let data = try? await item.loadTransferable(type: Data.self),
+                               let uiImage = UIImage(data: data) {
+                                
+                                let resizedImage = uiImage.resize(to: CGSize(width: 500, height: 500)) ?? uiImage
+                                
+                                await MainActor.run {
+                                    selectedImages.append(resizedImage)
+                                }
+                            }
+                        }
+                        await MainActor.run {
+                            localPickerItems = []
+                            onPhotosAdded()
+                        }
+                    }
+                }
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(selectedImages.indices, id: \.self) { index in
+                            Image(uiImage: selectedImages[index])
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 80, height: 80)
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .strokeBorder(selectedImageIndex == index ? .purple : Color.clear, lineWidth: 3)
+                                )
+                                .onTapGesture {
+                                    if selectedImageIndex == index {
+                                        selectedImageIndex = nil
+                                    } else {
+                                        selectedImageIndex = index
+                                    }
+                                }
+                                .onDrag {
+                                    self.currentDraggingIndex = index
+                                    return NSItemProvider(object: String(index) as NSString)
+                                }
+                                .onDrop(of: [UTType.text], delegate: ImageDropDelegate(index: index, items: $selectedImages, currentDraggingIndex: $currentDraggingIndex))
+                        }
+                    }
+                    .padding(.vertical)
+                    .padding(.trailing)
+                }
+                .frame(height: 90)
             }
-            .frame(height: 90)
+            .padding(.horizontal)
 
             if !selectedImages.isEmpty {
                 VStack(spacing: 12) {

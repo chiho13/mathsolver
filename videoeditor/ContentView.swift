@@ -26,6 +26,7 @@ struct ContentView: View {
     @State private var photosPerPage = 1
     @State private var scrollToBottom = false
     @State private var addTextMode = false
+    @EnvironmentObject private var iap: IAPManager
 
     var body: some View {
         NavigationView {
@@ -75,7 +76,7 @@ struct ContentView: View {
                         // This case is now less likely to be visible, might need rethinking if search is a primary feature
                         SearchResultsView(searchOutput: searchOutput!)
                     } else {
-                        PhotoSelectorView(selectedPickerItems: $selectedPickerItems)
+                        PhotoSelectorView(selectedPickerItems: $selectedPickerItems, selectedImages: $selectedImages)
                     }
                 }
                 .animation(.easeInOut, value: pdfURL)
@@ -156,6 +157,11 @@ struct ContentView: View {
                 if searchHistory == nil {
                     searchHistory = SearchHistoryManager(modelContext: modelContext)
                 }
+                
+                // Listen for premium upgrade notifications
+                NotificationCenter.default.addObserver(forName: NSNotification.Name("ShowPremiumView"), object: nil, queue: .main) { _ in
+                    showPremiumView = true
+                }
             }
             .onChange(of: selectedImages) { _ in
                 if selectedImages.isEmpty {
@@ -215,15 +221,14 @@ struct ContentView: View {
                 // }
                 
 
-                // Always show Upgrade button (in secondary position when PDF exists)
-                ToolbarItem(placement: pdfURL != nil ? .navigationBarTrailing : .navigationBarTrailing) {
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.1)) {
-                            showPremiumView = true
-                        }
-                    }) {
-                       
-                            // Full button when no PDF
+                // Upgrade button (hidden when user is already premium)
+                if iap.didCheckPremium && !iap.isPremium {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.1)) {
+                                showPremiumView = true
+                            }
+                        }) {
                             Text("Upgrade")
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.white)
@@ -232,11 +237,11 @@ struct ContentView: View {
                                     LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .leading, endPoint: .trailing)
                                 )
                                 .cornerRadius(8)
-                        
+                        }
+                        .padding(.top, 8)
+                        .padding(.leading, pdfURL != nil ? 8 : 0)
+                        .opacity(showPremiumView ? 0 : 1)
                     }
-                    .padding(.top, 8)
-                    .padding(.leading, pdfURL != nil ? 8 : 0) // Add spacing when both buttons are present
-                    .opacity(showPremiumView ? 0 : 1)
                 }
 
                 // PDF Control Buttons (when PDF is available)

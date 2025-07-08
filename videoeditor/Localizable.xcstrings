@@ -4,13 +4,7 @@
     " and " : {
 
     },
-    " privacy policy." : {
-
-    },
     " Privacy Policy." : {
-
-    },
-    " terms" : {
 
     },
     "%lld." : {
@@ -32,9 +26,6 @@
           }
         }
       }
-    },
-    "30-second limit per session" : {
-
     },
     "All Languages" : {
       "extractionState" : "manual",
@@ -82,9 +73,6 @@
           }
         }
       }
-    },
-    "By continuing you agree to our " : {
-
     },
     "Cancel" : {
       "extractionState" : "manual",
@@ -166,6 +154,9 @@
         }
       }
     },
+    "Free: Up to %lld photos" : {
+
+    },
     "Get Started" : {
 
     },
@@ -236,7 +227,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Experience seamless live translation\nfor any conversation or event"
+            "value" : "Convert your photos into\nprofessional PDF documents"
           }
         }
       }
@@ -247,7 +238,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Real-time speech recognition and translation"
+            "value" : "Multiple photos per page with flexible layouts"
           }
         }
       }
@@ -258,7 +249,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Support for multiple languages simultaneously"
+            "value" : "Portrait and landscape orientations"
           }
         }
       }
@@ -269,7 +260,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Perfect for live events, meetings,\nand conversations"
+            "value" : "Perfect for documents, receipts,\nand sharing with others"
           }
         }
       }
@@ -280,7 +271,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Connect with people across language barriers"
+            "value" : "Share PDFs easily via email, cloud, or messaging"
           }
         }
       }
@@ -316,7 +307,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Supports 38 languages"
+            "value" : "Professional quality PDF output"
           }
         }
       }
@@ -327,7 +318,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unlimited Photo Recognition"
+            "value" : "All layout options"
           }
         }
       }
@@ -338,7 +329,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unlimited AI Searches"
+            "value" : "Add more than 3 photos"
           }
         }
       }
@@ -349,7 +340,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Get unlimited searches"
+            "value" : "Unlimited photos to PDF"
           }
         }
       }
@@ -360,7 +351,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unlimited AI Searches"
+            "value" : "Add more than 3 photos"
           }
         }
       }
@@ -368,7 +359,16 @@
     "PDF Reporter" : {
 
     },
+    "Photo Limit Reached" : {
+
+    },
     "Portrait" : {
+
+    },
+    "Premium: Unlimited photos" : {
+
+    },
+    "Privacy Policy" : {
 
     },
     "Privacy Policy." : {
@@ -514,6 +514,9 @@
         }
       }
     },
+    "The free version allows up to %lld photos. Please upgrade for unlimited photos." : {
+
+    },
     "The Local Finder" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -556,7 +559,7 @@
     "This subscription automatically renews for %@ per year after 7 day trial. You can cancel anytime. By subscribing, you agree to the" : {
 
     },
-    "This subscription automatically renews for %@. Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase. \n\nTerms of Service & Privacy Policy apply." : {
+    "This subscription automatically renews for %@. Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase." : {
 
     },
     "This will delete all search history" : {
@@ -581,9 +584,6 @@
         }
       }
     },
-    "Try Ekto for %lld credits for free" : {
-
-    },
     "Two Photos" : {
 
     },
@@ -600,6 +600,15 @@
           }
         }
       }
+    },
+    "Upgrade for unlimited photos" : {
+
+    },
+    "Upgrade to Premium" : {
+
+    },
+    "Upgrade to Premium to select unlimited photos and unlock all features!" : {
+
     },
     "Weekly PRO" : {
       "extractionState" : "manual",

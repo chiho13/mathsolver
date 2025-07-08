@@ -11,8 +11,8 @@ import StoreKit
 
 
 enum SubscriptionPlan: String, CaseIterable, Identifiable {
-    case weekly = "weekly.infofinder"
-    case yearly = "yearly.infofinder"
+    case weekly = "editor.weekly"
+    case yearly = "editor.yearly"
     var id: String { self.rawValue }
     
     var displayName: String {

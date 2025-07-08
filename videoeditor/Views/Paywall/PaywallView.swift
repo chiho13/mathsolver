@@ -27,7 +27,7 @@ struct PaywallView: View {
 
                     BenefitsView(selectedPlan: $vm.selectedPlan)
 
-                    PlanCardsSection(selectedPlan: $vm.selectedPlan)
+                    PlanCardsSection()
 
                     ContinueButton(action: {
                         await vm.purchase(iap: iap)
@@ -62,11 +62,20 @@ struct PaywallView: View {
                 return Alert(title: Text("Error"), message: Text(msg), dismissButton: .default(Text("OK")))
             }
         }
-        .sheet(isPresented: $vm.isPurchasing) {
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
-                .scaleEffect(1.5)
-        }
+        .overlay(
+            Group {
+                if vm.isPurchasing {
+                    ZStack {
+                        Color.black.opacity(0.4)
+                            .ignoresSafeArea()
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
+                            .scaleEffect(1.5)
+                    }
+                }
+            }
+        )
+        .disabled(vm.isPurchasing)
     }
 }
 
@@ -121,22 +130,19 @@ private struct HeaderView: View {
 //}
 
 private struct PlanCardsSection: View {
-    @Binding var selectedPlan: SubscriptionPlan
     @EnvironmentObject private var iap: IAPManager
 
     var body: some View {
         VStack(spacing: 16) {
             PlanCard(title: "Annual PRO",
                      priceText: "\(iap.priceText(for: .yearly))/year",
-                     badge: "Best Deal",
-                     isSelected: selectedPlan == .yearly,
-                     onSelect: { selectedPlan = .yearly })
+                     badge: nil)
 
-            PlanCard(title: "Weekly PRO",
-                     priceText: "\(iap.priceText(for: .weekly))/week",
-                     badge: nil,
-                     isSelected: selectedPlan == .weekly,
-                     onSelect: { selectedPlan = .weekly })
+            // PlanCard(title: "Weekly PRO",
+            //          priceText: "\(iap.priceText(for: .weekly))/week",
+            //          badge: nil,
+            //          isSelected: selectedPlan == .weekly,
+            //          onSelect: { selectedPlan = .weekly })
         }
         .padding(.horizontal)
     }
@@ -146,41 +152,32 @@ private struct PlanCard: View {
     let title: String
     let priceText: String
     let badge: String?
-    let isSelected: Bool
-    let onSelect: () -> Void
 
     var body: some View {
-        Button(action: onSelect) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title).font(.headline)
-                    Text(priceText).font(.subheadline)
-                }
-                Spacer()
-                if let badge {
-                    Text(badge)
-                        .font(.caption.bold())
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(Color.red)
-                        .foregroundColor(.white)
-                        .clipShape(Capsule())
-                }
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isSelected ? .accentColor : .secondary)
-                    .font(.title3)
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.headline)
+                Text(priceText).font(.subheadline)
             }
-            .padding()
-            .frame(maxWidth: .infinity)
-            .background(isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.accentColor : Color.secondary, lineWidth: 2)
-            )
-            .cornerRadius(12)
-            .contentShape(Rectangle())
+            Spacer()
+            if let badge {
+                Text(badge)
+                    .font(.caption.bold())
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Color.red)
+                    .foregroundColor(.white)
+                    .clipShape(Capsule())
+            }
         }
-        .buttonStyle(.plain)
+        .padding()
+        .frame(maxWidth: .infinity)
+        .background(Color.accentColor.opacity(0.1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.accentColor, lineWidth: 2)
+        )
+        .cornerRadius(12)
     }
 }
 
@@ -223,10 +220,22 @@ private struct LegalTextView: View {
     @EnvironmentObject private var iap: IAPManager
     var body: some View {
         let price = iap.priceText(for: selectedPlan)
-        Text("This subscription automatically renews for \(price). Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase. \n\nTerms of Service & Privacy Policy apply.")
-            .font(.footnote)
-            .foregroundColor(.secondary)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal)
+        VStack(spacing: 8) {
+            Text("This subscription automatically renews for \(price). Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase.")
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            HStack(spacing: 16) {
+                Link("Terms of Service", destination: URL(string: "https://verby.co/phototopdf")!)
+                    .font(.footnote)
+                    .foregroundColor(.blue)
+                
+                Link("Privacy Policy", destination: URL(string: "https://verby.co/phototopdf/privacy")!)
+                    .font(.footnote)
+                    .foregroundColor(.blue)
+            }
+        }
     }
 } 
