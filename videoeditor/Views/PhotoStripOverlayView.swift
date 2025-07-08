@@ -9,9 +9,12 @@ struct PhotoStripOverlayView: View {
     @Binding var showResetConfirmation: Bool
     @Binding var isLandscape: Bool
     @Binding var photosPerPage: Int
+    @Binding var projectTitle: String
+    @Binding var showTitleOnPDF: Bool // Add this binding
     let onOrientationChange: () -> Void
     let onPhotosPerPageChange: () -> Void
     let onPhotosAdded: () -> Void
+    let onTitleVisibilityChange: () -> Void
     @State private var currentDraggingIndex: Int?
     @State private var selectedImageIndex: Int?
     @State private var localPickerItems: [PhotosPickerItem] = []
@@ -21,6 +24,23 @@ struct PhotoStripOverlayView: View {
 
     var body: some View {
         VStack(spacing: 12) {
+            // Add the TextField for the project title here
+            HStack {
+                Text("Title:")
+                    .font(.subheadline.weight(.medium))
+                TextField("Project Title", text: $projectTitle)
+                    .textFieldStyle(.roundedBorder)
+                Button(action: {
+                    showTitleOnPDF.toggle()
+                    onTitleVisibilityChange()
+                }) {
+                    Image(systemName: showTitleOnPDF ? "eye" : "eye.slash")
+                        .foregroundColor(showTitleOnPDF ? .blue : .gray)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
+
             HStack(spacing: 0) {
                 Button(action: {
                     if photosPerPage != 1 {

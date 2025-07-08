@@ -15,6 +15,9 @@ struct AllProjectsView: View {
     @Binding var selectedImages: [UIImage]
     @State private var projectToDelete: PDFProject?
     @State private var showDeleteAlert = false
+    @State private var projectToRename: PDFProject?
+    @State private var newProjectName = ""
+    @State private var showRenameAlert = false
     @State private var isListView = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) var colorScheme
@@ -68,6 +71,21 @@ struct AllProjectsView: View {
                 Text("Are you sure you want to delete \"\(project.title)\"? This action cannot be undone.")
             }
         }
+        .alert("Rename Project", isPresented: $showRenameAlert) {
+            TextField("Enter new name", text: $newProjectName)
+                .autocorrectionDisabled()
+            
+            Button("Save") {
+                if let project = projectToRename {
+                    renameProject(project, to: newProjectName)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let project = projectToRename {
+                Text("Enter a new name for \"\(project.title)\".")
+            }
+        }
     }
     
     private var listView: some View {
@@ -76,6 +94,23 @@ struct AllProjectsView: View {
                 ProjectListRow(project: project) {
                     loadProject(project)
                     dismiss()
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(role: .destructive) {
+                        projectToDelete = project
+                        showDeleteAlert = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    
+                    Button {
+                        projectToRename = project
+                        newProjectName = project.title
+                        showRenameAlert = true
+                    } label: {
+                        Label("Rename", systemImage: "pencil")
+                    }
+                    .tint(.blue)
                 }
             }
             .onDelete(perform: deleteProjects)
@@ -96,10 +131,11 @@ struct AllProjectsView: View {
                     }
                     .contextMenu {
                         Button(action: {
-                            loadProject(project)
-                            dismiss()
+                            projectToRename = project
+                            newProjectName = project.title
+                            showRenameAlert = true
                         }) {
-                            Label("Edit", systemImage: "pencil")
+                            Label("Rename", systemImage: "pencil")
                         }
                         
                         Button(role: .destructive, action: {
@@ -125,6 +161,17 @@ struct AllProjectsView: View {
         for index in offsets {
             let project = allProjects[index]
             deleteProject(project)
+        }
+    }
+    
+    private func renameProject(_ project: PDFProject, to newName: String) {
+        guard !newName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        project.title = newName
+        project.modifiedDate = Date()
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to save renamed project: \(error)")
         }
     }
     

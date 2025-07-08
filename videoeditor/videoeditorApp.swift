@@ -31,6 +31,7 @@ struct videoeditorApp: App {
         // Check UserDefaults to see if the app has been launched before
         !UserDefaults.standard.bool(forKey: "hasLaunchedBefore")
     }()
+    
 
     @StateObject private var iapManager = IAPManager()
     

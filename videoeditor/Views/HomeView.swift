@@ -10,6 +10,9 @@ struct HomeView: View {
     @State private var projectToDelete: PDFProject?
     @State private var showDeleteAlert = false
     @State private var showAllProjects = false
+    @State private var projectToRename: PDFProject?
+    @State private var newProjectName = ""
+    @State private var showRenameAlert = false
     @EnvironmentObject var iapManager: IAPManager
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.modelContext) private var modelContext
@@ -68,9 +71,11 @@ struct HomeView: View {
                                 }
                                 .contextMenu {
                                     Button(action: {
-                                        loadProject(project)
+                                        projectToRename = project
+                                        newProjectName = project.title
+                                        showRenameAlert = true
                                     }) {
-                                        Label("Edit", systemImage: "pencil")
+                                        Label("Rename", systemImage: "pencil")
                                     }
                                     
                                     Button(role: .destructive, action: {
@@ -110,12 +115,38 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $showAllProjects) {
             AllProjectsView(currentProject: $currentProject, selectedImages: $selectedImages)
         }
+        .alert("Rename Project", isPresented: $showRenameAlert) {
+            TextField("Enter new name", text: $newProjectName)
+                .autocorrectionDisabled()
+            
+            Button("Save") {
+                if let project = projectToRename {
+                    renameProject(project, to: newProjectName)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            if let project = projectToRename {
+                Text("Enter a new name for \"\(project.title)\".")
+            }
+        }
     }
     
     private func loadProject(_ project: PDFProject) {
         currentProject = project
         selectedImages = project.images
         // The ContentView will automatically switch to editor mode when selectedImages is populated
+    }
+    
+    private func renameProject(_ project: PDFProject, to newName: String) {
+        guard !newName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        project.title = newName
+        project.modifiedDate = Date()
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to save renamed project: \(error)")
+        }
     }
     
     private func deleteProject(_ project: PDFProject) {

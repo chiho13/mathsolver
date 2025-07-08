@@ -48,7 +48,7 @@ struct ContentView: View {
                         }
                         .id("\(pdfURL.absoluteString)_\(isLandscape)_\(photosPerPage)_\(selectedImages.count)")
                         .padding(.top, 10)
-                        .padding(.bottom, showPhotoStrip ? 290 : 40)
+                        .padding(.bottom, showPhotoStrip ? 340 : 40)
                         .padding(.horizontal, 10)
                         .animation(.easeInOut(duration: 0.3), value: showPhotoStrip)
                         .ignoresSafeArea(.keyboard)
@@ -101,8 +101,8 @@ struct ContentView: View {
                         }
                     }) {
                         HStack {
-                            Image(systemName: showPhotoStrip ? "eye.slash" : "slider.horizontal.3")
-                            Text(showPhotoStrip ? "Hide" : "Edit")
+                            Image(systemName: showPhotoStrip ? "chevron.down" : "slider.horizontal.3")
+                            Text(showPhotoStrip ? "Done" : "Edit")
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
@@ -112,7 +112,7 @@ struct ContentView: View {
                         .shadow(radius: 4)
                     }
                     .padding()
-                    .padding(.bottom, showPhotoStrip ? 270 : 20) // Move up when overlay is visible
+                    .padding(.bottom, showPhotoStrip ? 320 : 20) // Move up when overlay is visible
                     .animation(.easeInOut(duration: 0.3), value: showPhotoStrip)
                 }
             }
@@ -124,15 +124,21 @@ struct ContentView: View {
                         showResetConfirmation: $showResetConfirmation,
                         isLandscape: $isLandscape,
                         photosPerPage: $photosPerPage,
-                        onOrientationChange: { 
+                        projectTitle: projectTitleBinding, // Pass the binding here
+                        showTitleOnPDF: showTitleBinding, // Pass the new binding
+                        onOrientationChange: {
                             updateProjectConfiguration()
-                            generatePDF() 
+                            generatePDF()
                         },
-                        onPhotosPerPageChange: { 
+                        onPhotosPerPageChange: {
                             updateProjectConfiguration()
-                            generatePDF() 
+                            generatePDF()
                         },
-                        onPhotosAdded: generatePDF
+                        onPhotosAdded: generatePDF,
+                        onTitleVisibilityChange: {
+                            updateProjectConfiguration()
+                            generatePDF()
+                        }
                     )
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -349,55 +355,36 @@ struct ContentView: View {
             }
         }
     }
-    
-    func updateProjectConfiguration() {
+
+    private var projectTitleBinding: Binding<String> {
+        Binding<String>(
+            get: { self.currentProject?.title ?? "Untitled" },
+            set: { self.currentProject?.title = $0 }
+        )
+    }
+
+    private var showTitleBinding: Binding<Bool> {
+        Binding<Bool>(
+            get: { self.currentProject?.showTitle ?? true },
+            set: { self.currentProject?.showTitle = $0 }
+        )
+    }
+
+    private func updateProjectConfiguration() {
         guard let project = currentProject else { return }
-        project.updateConfiguration(isLandscape: isLandscape, photosPerPage: photosPerPage)
+        project.updateConfiguration(title: project.title, isLandscape: isLandscape, photosPerPage: photosPerPage, showTitle: project.showTitle)
         do {
             try modelContext.save()
         } catch {
-            print("Failed to save project configuration: \(error)")
+            print("Failed to save configuration: \(error)")
         }
     }
-    
-    func performSearch() {
-        UIApplication.shared.endEditing()
-        let trimmed = query.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        isLoading = true
-        errorMessage = nil
-        searchOutput = nil
-        Task {
-            do {
-                let output = try await searchService.search(query: trimmed, language: languageSettings.plainEnglish[languageSettings.sourceLanguage] ?? "English")
-                await MainActor.run {
-                    self.searchOutput = output
-                    self.isLoading = false
-                    self.searchHistory?.addItem(query: trimmed, result: output)
-                }
-            } catch {
-                await MainActor.run {
-                    if let searchError = error as? SearchError {
-                        switch searchError {
-                        case .invalidURL:
-                            self.errorMessage = "Invalid URL."
-                        case .networkError(let err):
-                            self.errorMessage = "Network error: \(err.localizedDescription)"
-                        case .invalidResponse:
-                            self.errorMessage = "Invalid response from server."
-                        case .serverError(let msg):
-                            self.errorMessage = "Server error: \(msg)"
-                        }
-                    } else {
-                        self.errorMessage = error.localizedDescription
-                    }
-                    self.isLoading = false
-                }
-            }
+
+    private func generatePDF() {
+        guard let project = currentProject else {
+            errorMessage = "No active project to generate PDF for."
+            return
         }
-    }
-    
-    func generatePDF() {
         guard !selectedImages.isEmpty else { return }
         print("Generating PDF with \(selectedImages.count) images")
         let pdfData = NSMutableData()
@@ -411,41 +398,75 @@ struct ContentView: View {
 
         UIGraphicsBeginPDFContextToData(pdfData, pageRect, nil)
         
+        let titleFont = UIFont.systemFont(ofSize: 24, weight: .bold)
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: titleFont,
+            .foregroundColor: UIColor.black
+        ]
+        
         if photosPerPage == 1 {
             // One photo per page
-            for img in selectedImages {
+            for (index, img) in selectedImages.enumerated() {
                 UIGraphicsBeginPDFPageWithInfo(pageRect, nil)
-                let aspectFitRect = AVMakeRect(aspectRatio: img.size, insideRect: imageableArea)
+                var currentPageImageableArea = imageableArea
+                
+                // If it's the first page and title is enabled, draw title and adjust area
+                if index == 0 && project.showTitle {
+                    let title = project.title
+                    let titleSize = title.size(withAttributes: titleAttributes)
+                    let titleRect = CGRect(x: (pageRect.width - titleSize.width) / 2.0,
+                                           y: imageableArea.minY,
+                                           width: titleSize.width,
+                                           height: titleSize.height)
+                    title.draw(in: titleRect, withAttributes: titleAttributes)
+                    
+                    // Adjust imageable area for the image below the title
+                    currentPageImageableArea.origin.y += titleSize.height + 20 // 20 points padding
+                    currentPageImageableArea.size.height -= titleSize.height + 20
+                }
+                
+                let aspectFitRect = AVMakeRect(aspectRatio: img.size, insideRect: currentPageImageableArea)
                 img.draw(in: aspectFitRect)
             }
         } else if photosPerPage == 2 {
             // Two photos per page
             for i in stride(from: 0, to: selectedImages.count, by: 2) {
                 UIGraphicsBeginPDFPageWithInfo(pageRect, nil)
+                var currentPageImageableArea = imageableArea
+
+                // If it's the first page and title is enabled, draw title and adjust area
+                if i == 0 && project.showTitle {
+                    let title = project.title
+                    let titleSize = title.size(withAttributes: titleAttributes)
+                    let titleRect = CGRect(x: (pageRect.width - titleSize.width) / 2.0,
+                                           y: imageableArea.minY,
+                                           width: titleSize.width,
+                                           height: titleSize.height)
+                    title.draw(in: titleRect, withAttributes: titleAttributes)
+                    
+                    currentPageImageableArea.origin.y += titleSize.height + 20
+                    currentPageImageableArea.size.height -= titleSize.height + 20
+                }
                 
                 let firstImage = selectedImages[i]
                 let spacing: CGFloat = 20
                 
                 if i + 1 < selectedImages.count {
-                    // Two images on this page
                     let secondImage = selectedImages[i + 1]
-                    let availableHeight = imageableArea.height - spacing
+                    let availableHeight = currentPageImageableArea.height - spacing
                     let halfHeight = availableHeight / 2
                     
-                    // Top image
-                    let topRect = CGRect(x: imageableArea.minX, y: imageableArea.minY, 
-                                       width: imageableArea.width, height: halfHeight)
+                    let topRect = CGRect(x: currentPageImageableArea.minX, y: currentPageImageableArea.minY,
+                                       width: currentPageImageableArea.width, height: halfHeight)
                     let topAspectFitRect = AVMakeRect(aspectRatio: firstImage.size, insideRect: topRect)
                     firstImage.draw(in: topAspectFitRect)
                     
-                    // Bottom image
-                    let bottomRect = CGRect(x: imageableArea.minX, y: imageableArea.minY + halfHeight + spacing,
-                                          width: imageableArea.width, height: halfHeight)
+                    let bottomRect = CGRect(x: currentPageImageableArea.minX, y: currentPageImageableArea.minY + halfHeight + spacing,
+                                          width: currentPageImageableArea.width, height: halfHeight)
                     let bottomAspectFitRect = AVMakeRect(aspectRatio: secondImage.size, insideRect: bottomRect)
                     secondImage.draw(in: bottomAspectFitRect)
                 } else {
-                    // Only one image on this page (last page with odd number of images)
-                    let aspectFitRect = AVMakeRect(aspectRatio: firstImage.size, insideRect: imageableArea)
+                    let aspectFitRect = AVMakeRect(aspectRatio: firstImage.size, insideRect: currentPageImageableArea)
                     firstImage.draw(in: aspectFitRect)
                 }
             }
@@ -453,40 +474,51 @@ struct ContentView: View {
             // 2x2 grid - four photos per page
             for i in stride(from: 0, to: selectedImages.count, by: 4) {
                 UIGraphicsBeginPDFPageWithInfo(pageRect, nil)
+                var currentPageImageableArea = imageableArea
+
+                // If it's the first page and title is enabled, draw title and adjust area
+                if i == 0 && project.showTitle {
+                    let title = project.title
+                    let titleSize = title.size(withAttributes: titleAttributes)
+                    let titleRect = CGRect(x: (pageRect.width - titleSize.width) / 2.0,
+                                           y: imageableArea.minY,
+                                           width: titleSize.width,
+                                           height: titleSize.height)
+                    title.draw(in: titleRect, withAttributes: titleAttributes)
+                    
+                    currentPageImageableArea.origin.y += titleSize.height + 20
+                    currentPageImageableArea.size.height -= titleSize.height + 20
+                }
                 
                 let spacing: CGFloat = 15
-                let availableWidth = imageableArea.width - spacing
-                let availableHeight = imageableArea.height - spacing
+                let availableWidth = currentPageImageableArea.width - spacing
+                let availableHeight = currentPageImageableArea.height - spacing
                 let halfWidth = availableWidth / 2
                 let halfHeight = availableHeight / 2
                 
-                // Top-left (index i)
                 if i < selectedImages.count {
-                    let topLeftRect = CGRect(x: imageableArea.minX, y: imageableArea.minY,
+                    let topLeftRect = CGRect(x: currentPageImageableArea.minX, y: currentPageImageableArea.minY,
                                            width: halfWidth, height: halfHeight)
                     let topLeftAspectFitRect = AVMakeRect(aspectRatio: selectedImages[i].size, insideRect: topLeftRect)
                     selectedImages[i].draw(in: topLeftAspectFitRect)
                 }
                 
-                // Top-right (index i+1)
                 if i + 1 < selectedImages.count {
-                    let topRightRect = CGRect(x: imageableArea.minX + halfWidth + spacing, y: imageableArea.minY,
+                    let topRightRect = CGRect(x: currentPageImageableArea.minX + halfWidth + spacing, y: currentPageImageableArea.minY,
                                             width: halfWidth, height: halfHeight)
                     let topRightAspectFitRect = AVMakeRect(aspectRatio: selectedImages[i+1].size, insideRect: topRightRect)
                     selectedImages[i+1].draw(in: topRightAspectFitRect)
                 }
                 
-                // Bottom-left (index i+2)
                 if i + 2 < selectedImages.count {
-                    let bottomLeftRect = CGRect(x: imageableArea.minX, y: imageableArea.minY + halfHeight + spacing,
+                    let bottomLeftRect = CGRect(x: currentPageImageableArea.minX, y: currentPageImageableArea.minY + halfHeight + spacing,
                                               width: halfWidth, height: halfHeight)
                     let bottomLeftAspectFitRect = AVMakeRect(aspectRatio: selectedImages[i+2].size, insideRect: bottomLeftRect)
                     selectedImages[i+2].draw(in: bottomLeftAspectFitRect)
                 }
                 
-                // Bottom-right (index i+3)
                 if i + 3 < selectedImages.count {
-                    let bottomRightRect = CGRect(x: imageableArea.minX + halfWidth + spacing, y: imageableArea.minY + halfHeight + spacing,
+                    let bottomRightRect = CGRect(x: currentPageImageableArea.minX + halfWidth + spacing, y: currentPageImageableArea.minY + halfHeight + spacing,
                                                width: halfWidth, height: halfHeight)
                     let bottomRightAspectFitRect = AVMakeRect(aspectRatio: selectedImages[i+3].size, insideRect: bottomRightRect)
                     selectedImages[i+3].draw(in: bottomRightAspectFitRect)

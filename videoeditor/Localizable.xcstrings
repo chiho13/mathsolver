@@ -173,6 +173,12 @@
     "Enter a name for your new PDF project." : {
 
     },
+    "Enter a new name for \"%@\"." : {
+
+    },
+    "Enter new name" : {
+
+    },
     "Error" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -200,9 +206,6 @@
           }
         }
       }
-    },
-    "Hide" : {
-
     },
     "Landscape" : {
 
@@ -422,6 +425,9 @@
     "Project name" : {
 
     },
+    "Project Title" : {
+
+    },
     "Projects" : {
 
     },
@@ -448,6 +454,12 @@
     "Remove All Photos?" : {
 
     },
+    "Rename" : {
+
+    },
+    "Rename Project" : {
+
+    },
     "Restore" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -460,6 +472,9 @@
       }
     },
     "Restore Purchases" : {
+
+    },
+    "Save" : {
 
     },
     "Search for places, news, or tips..." : {
@@ -619,6 +634,9 @@
       }
     },
     "This will delete the project and all photos." : {
+
+    },
+    "Title:" : {
 
     },
     "To enable real-time translation, we need access to your microphone. Please enable microphone access in Settings to use this feature." : {

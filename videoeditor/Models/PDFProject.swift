@@ -10,15 +10,17 @@ class PDFProject {
     var modifiedDate: Date
     var isLandscape: Bool
     var photosPerPage: Int
+    var showTitle: Bool
     var imageDataArray: [String] // base64 encoded images
     
-    init(title: String, isLandscape: Bool = false, photosPerPage: Int = 1, images: [UIImage] = []) {
+    init(title: String, isLandscape: Bool = false, photosPerPage: Int = 1, images: [UIImage] = [], showTitle: Bool = true) {
         self.id = UUID()
         self.title = title
         self.createdDate = Date()
         self.modifiedDate = Date()
         self.isLandscape = isLandscape
         self.photosPerPage = photosPerPage
+        self.showTitle = showTitle
         self.imageDataArray = images.compactMap { image in
             return image.jpegData(compressionQuality: 0.8)?.base64EncodedString()
         }
@@ -68,7 +70,7 @@ class PDFProject {
     }
     
     // Helper method to update configuration
-    func updateConfiguration(title: String? = nil, isLandscape: Bool? = nil, photosPerPage: Int? = nil) {
+    func updateConfiguration(title: String? = nil, isLandscape: Bool? = nil, photosPerPage: Int? = nil, showTitle: Bool? = nil) {
         if let title = title {
             self.title = title
         }
@@ -77,6 +79,9 @@ class PDFProject {
         }
         if let photosPerPage = photosPerPage {
             self.photosPerPage = photosPerPage
+        }
+        if let showTitle = showTitle {
+            self.showTitle = showTitle
         }
         self.modifiedDate = Date()
     }
