@@ -14,7 +14,8 @@ struct videoeditorApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             SearchHistoryItem.self,
-            Usage.self
+            Usage.self,
+            PDFProject.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema,
                                                     isStoredInMemoryOnly: false)

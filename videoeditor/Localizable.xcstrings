@@ -7,6 +7,9 @@
     " Privacy Policy." : {
 
     },
+    "%lld" : {
+
+    },
     "%lld." : {
 
     },
@@ -38,6 +41,9 @@
         }
       }
     },
+    "All Projects" : {
+
+    },
     "Annual PRO" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -50,6 +56,9 @@
       }
     },
     "Are you sure you want to delete \"%@\"?" : {
+
+    },
+    "Are you sure you want to delete \"%@\"? This action cannot be undone." : {
 
     },
     "Are you sure?" : {
@@ -84,6 +93,9 @@
           }
         }
       }
+    },
+    "Cards" : {
+
     },
     "Choose language pairs" : {
       "extractionState" : "manual",
@@ -129,6 +141,12 @@
         }
       }
     },
+    "Create" : {
+
+    },
+    "Create New Project" : {
+
+    },
     "Delete" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -140,7 +158,19 @@
         }
       }
     },
+    "Delete Project" : {
+
+    },
+    "Delete Project?" : {
+
+    },
+    "Done" : {
+
+    },
     "Edit" : {
+
+    },
+    "Enter a name for your new PDF project." : {
 
     },
     "Error" : {
@@ -188,6 +218,9 @@
         }
       }
     },
+    "List" : {
+
+    },
     "Microphone Access Needed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -199,6 +232,9 @@
         }
       }
     },
+    "New Project" : {
+
+    },
     "next" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -209,6 +245,9 @@
           }
         }
       }
+    },
+    "No Images" : {
+
     },
     "OK" : {
       "extractionState" : "manual",
@@ -380,6 +419,15 @@
     "Processing your purchase" : {
 
     },
+    "Project name" : {
+
+    },
+    "Projects" : {
+
+    },
+    "Recent Projects" : {
+
+    },
     "Recently Used" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -458,6 +506,9 @@
         }
       }
     },
+    "See All" : {
+
+    },
     "Select Language" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -468,9 +519,6 @@
           }
         }
       }
-    },
-    "Select Photos" : {
-
     },
     "Share" : {
 
@@ -550,9 +598,6 @@
         }
       }
     },
-    "This action cannot be undone." : {
-
-    },
     "This subscription automatically renews for %@ per week. You can cancel anytime. By subscribing, you agree to the" : {
 
     },
@@ -572,6 +617,9 @@
           }
         }
       }
+    },
+    "This will delete the project and all photos." : {
+
     },
     "To enable real-time translation, we need access to your microphone. Please enable microphone access in Settings to use this feature." : {
       "extractionState" : "manual",
@@ -608,6 +656,9 @@
 
     },
     "Upgrade to Premium to select unlimited photos and unlock all features!" : {
+
+    },
+    "View Mode" : {
 
     },
     "Weekly PRO" : {

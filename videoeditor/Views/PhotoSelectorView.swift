@@ -4,9 +4,14 @@ import PhotosUI
 struct PhotoSelectorView: View {
     @Binding var selectedPickerItems: [PhotosPickerItem]
     @Binding var selectedImages: [UIImage]
+    @Binding var currentProject: PDFProject?
     @State private var showPremiumAlert = false
+    @State private var showProjectNameAlert = false
+    @State private var projectName = ""
+    @State private var pendingPickerItems: [PhotosPickerItem] = []
     @EnvironmentObject var iapManager: IAPManager
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.modelContext) private var modelContext
     
     private let freeLimit = 3
     
@@ -26,7 +31,7 @@ struct PhotoSelectorView: View {
                         .foregroundColor(.blue)
                     
                     VStack(spacing: 4) {
-                        Text("Select Photos")
+                        Text("New Project")
                             .font(.title2.bold())
                             .foregroundColor(.primary)
                         
@@ -129,11 +134,63 @@ struct PhotoSelectorView: View {
         } message: {
             Text("Upgrade to Premium to select unlimited photos and unlock all features!")
         }
+        .alert("Create New Project", isPresented: $showProjectNameAlert) {
+            TextField("Project name", text: $projectName)
+            Button("Create") {
+                let trimmedName = projectName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmedName.isEmpty {
+                    // Create PDFProject immediately
+                    let newProject = PDFProject(title: trimmedName)
+                    modelContext.insert(newProject)
+                    
+                    // Save the context
+                    do {
+                        try modelContext.save()
+                        currentProject = newProject
+                    } catch {
+                        print("Failed to save project: \(error)")
+                    }
+                    
+                    // Process pending photos directly to avoid duplication
+                    Task {
+                        for item in pendingPickerItems {
+                            if let data = try? await item.loadTransferable(type: Data.self),
+                               let uiImage = UIImage(data: data) {
+                                await MainActor.run {
+                                    selectedImages.append(uiImage)
+                                }
+                            }
+                        }
+                        await MainActor.run {
+                            pendingPickerItems = []
+                            projectName = ""
+                        }
+                    }
+                }
+            }
+            .disabled(projectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            Button("Cancel", role: .cancel) {
+                // Clear pending items if user cancels
+                pendingPickerItems = []
+                projectName = ""
+            }
+        } message: {
+            Text("Enter a name for your new PDF project.")
+        }
         .onChange(of: selectedPickerItems) { newItems in
+            // Don't process empty selections
+            guard !newItems.isEmpty else { return }
+            
             // Check if user is trying to select more than the free limit
             if !iapManager.isPremium && selectedImages.count + newItems.count > freeLimit {
                 showPremiumAlert = true
+                return
             }
+            
+            // Store the pending items and show project name dialog
+            pendingPickerItems = newItems
+            selectedPickerItems = [] // Clear the picker selection temporarily
+            showProjectNameAlert = true
         }
     }
 } 

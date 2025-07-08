@@ -271,7 +271,7 @@ struct PhotoStripOverlayView: View {
                         Button(action: {
                             showResetConfirmation = true
                         }) {
-                            Label("Remove All", systemImage: "trash")
+                            Label("Delete Project", systemImage: "trash")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundColor(.red)
                         }
@@ -292,7 +292,7 @@ struct PhotoStripOverlayView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This action cannot be undone.")
+            Text("This will delete the project and all photos.")
         }
     }
 } 

@@ -19,6 +19,7 @@ struct ContentView: View {
     @State private var searchHistory: SearchHistoryManager?
     @State private var selectedPickerItems: [PhotosPickerItem] = []
     @State private var selectedImages: [UIImage] = []
+    @State private var currentProject: PDFProject?
     @State private var showResetConfirmation = false
     @State private var pdfURL: URL?
     @State private var isLandscape = false
@@ -39,7 +40,7 @@ struct ContentView: View {
                     }
                 
                 VStack(spacing: 0) {
-                    if let pdfURL = pdfURL {
+                    if let pdfURL = pdfURL, currentProject != nil {
                         PDFAnnotationView(url: pdfURL, addTextMode: $addTextMode) {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 showPhotoStrip = false
@@ -76,7 +77,7 @@ struct ContentView: View {
                         // This case is now less likely to be visible, might need rethinking if search is a primary feature
                         SearchResultsView(searchOutput: searchOutput!)
                     } else {
-                        PhotoSelectorView(selectedPickerItems: $selectedPickerItems, selectedImages: $selectedImages)
+                        HomeView(selectedPickerItems: $selectedPickerItems, selectedImages: $selectedImages, currentProject: $currentProject)
                     }
                 }
                 .animation(.easeInOut, value: pdfURL)
@@ -123,8 +124,14 @@ struct ContentView: View {
                         showResetConfirmation: $showResetConfirmation,
                         isLandscape: $isLandscape,
                         photosPerPage: $photosPerPage,
-                        onOrientationChange: generatePDF,
-                        onPhotosPerPageChange: generatePDF,
+                        onOrientationChange: { 
+                            updateProjectConfiguration()
+                            generatePDF() 
+                        },
+                        onPhotosPerPageChange: { 
+                            updateProjectConfiguration()
+                            generatePDF() 
+                        },
                         onPhotosAdded: generatePDF
                     )
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -165,14 +172,44 @@ struct ContentView: View {
             }
             .onChange(of: selectedImages) { _ in
                 if selectedImages.isEmpty {
-                    pdfURL = nil
-                    showPhotoStrip = false
+                    // Auto-delete empty project and return to home
+                    if let project = currentProject {
+                        modelContext.delete(project)
+                        do {
+                            try modelContext.save()
+                            print("Empty project '\(project.title)' deleted automatically")
+                        } catch {
+                            print("Failed to delete empty project: \(error)")
+                        }
+                    }
+                    
+                    // Clear editor state and return to home
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        currentProject = nil
+                        pdfURL = nil
+                        showPhotoStrip = false
+                        addTextMode = false
+                    }
                 } else {
+                    // Update project with new images
+                    if let project = currentProject {
+                        project.updateImages(selectedImages)
+                        project.updateConfiguration(isLandscape: isLandscape, photosPerPage: photosPerPage)
+                        do {
+                            try modelContext.save()
+                        } catch {
+                            print("Failed to save project updates: \(error)")
+                        }
+                    }
                     generatePDF()
                     showPhotoStrip = true
                 }
             }
             .onChange(of: selectedPickerItems) { newItems in
+                // Only process photos if we already have a current project
+                // (Photos from new project creation are handled in PhotoSelectorView)
+                guard currentProject != nil else { return }
+                
                 Task {
                     for item in newItems {
                         if let data = try? await item.loadTransferable(type: Data.self),
@@ -198,6 +235,43 @@ struct ContentView: View {
                 PremiumView(headline: "paywall-title")
             }
             .toolbar {
+                // Back to Home button (when editing a project)
+                if currentProject != nil {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                // Auto-save current state before going back
+                                if let project = currentProject {
+                                    project.updateImages(selectedImages)
+                                    project.updateConfiguration(isLandscape: isLandscape, photosPerPage: photosPerPage)
+                                    do {
+                                        try modelContext.save()
+                                        print("Project '\(project.title)' saved automatically")
+                                    } catch {
+                                        print("Failed to auto-save project: \(error)")
+                                    }
+                                }
+                                
+                                // Clear editor state and return to home
+                                currentProject = nil
+                                selectedImages = []
+                                pdfURL = nil
+                                showPhotoStrip = false
+                                addTextMode = false
+                            }
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 14, weight: .medium))
+                                Text("Projects")
+                                    .font(.system(size: 16, weight: .medium))
+                            }
+                            .foregroundColor(.blue)
+                        }
+                        .padding(.top, 8)
+                    }
+                }
+                
                 // ToolbarItem(placement: .navigationBarLeading) {
                 //     Button(action: {
                 //         withAnimation(.easeInOut(duration: 0.1)) {
@@ -239,6 +313,7 @@ struct ContentView: View {
                                 .cornerRadius(8)
                         }
                         .padding(.top, 8)
+                        .padding(.bottom, 8)
                         .padding(.leading, pdfURL != nil ? 8 : 0)
                         .opacity(showPremiumView ? 0 : 1)
                     }
@@ -266,11 +341,22 @@ struct ContentView: View {
                             }
                         }
                         .padding(.top, 8)
+                         .padding(.bottom, 8)
                         .padding(.trailing, -8)
                     }
                 }
                 
             }
+        }
+    }
+    
+    func updateProjectConfiguration() {
+        guard let project = currentProject else { return }
+        project.updateConfiguration(isLandscape: isLandscape, photosPerPage: photosPerPage)
+        do {
+            try modelContext.save()
+        } catch {
+            print("Failed to save project configuration: \(error)")
         }
     }
     
