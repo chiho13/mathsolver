@@ -12,7 +12,6 @@ struct PhotoStripOverlayView: View {
     @Binding var projectTitle: String
     @Binding var showTitleOnPDF: Bool // Add this binding
     @Binding var imageToEdit: EditableAsset?
-    let currentProject: PDFProject?
     let onOrientationChange: () -> Void
     let onPhotosPerPageChange: () -> Void
     let onPhotosAdded: () -> Void
@@ -237,7 +236,7 @@ struct PhotoStripOverlayView: View {
                                 .cornerRadius(10)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .strokeBorder(selectedImageIndex == index ? .purple : Color.clear, lineWidth: 3)
+                                        .strokeBorder(selectedImageIndex == index ? .blue : Color.clear, lineWidth: 3)
                                 )
                                 .onTapGesture {
                                     if selectedImageIndex == index {
@@ -268,17 +267,13 @@ struct PhotoStripOverlayView: View {
                         HStack {
                             Spacer()
                             Button(action: {
-                                // Get the original image from the project if available
-                                let originalImage: UIImage
-                                if let project = currentProject, selectedIndex < project.originalImages.count {
-                                    originalImage = project.originalImages[selectedIndex]
-                                } else {
-                                    originalImage = selectedImages[selectedIndex]
-                                }
-                                imageToEdit = EditableAsset(image: selectedImages[selectedIndex], originalImage: originalImage, index: selectedIndex)
+                                imageToEdit = EditableAsset(image: selectedImages[selectedIndex], index: selectedIndex)
                             }) {
                                 Label("Edit", systemImage: "pencil.circle")
                                     .font(.subheadline.weight(.medium))
+                                    .padding( 8)
+                                    .background(Color.gray.opacity(0.2))
+                                    .cornerRadius(8)
                             }
                             Spacer()
                             Divider().frame(height: 20)
@@ -292,6 +287,9 @@ struct PhotoStripOverlayView: View {
                                 Label("Remove", systemImage: "trash.circle")
                                     .font(.subheadline.weight(.medium))
                                     .foregroundColor(.red)
+                                    .padding( 8)
+                                    .background(Color.gray.opacity(0.2))
+                                    .cornerRadius(8)
                             }
                             Spacer()
                         }
@@ -303,6 +301,9 @@ struct PhotoStripOverlayView: View {
                             Label("Delete Project", systemImage: "trash")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundColor(.red)
+                                .padding(8)
+                                .background(Color.gray.opacity(0.2))
+                                .cornerRadius(8)
                         }
                     }
                 }
