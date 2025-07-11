@@ -12,6 +12,7 @@ struct PhotoStripOverlayView: View {
     @Binding var projectTitle: String
     @Binding var showTitleOnPDF: Bool // Add this binding
     @Binding var imageToEdit: EditableAsset?
+    let currentProject: PDFProject?
     let onOrientationChange: () -> Void
     let onPhotosPerPageChange: () -> Void
     let onPhotosAdded: () -> Void
@@ -267,7 +268,14 @@ struct PhotoStripOverlayView: View {
                         HStack {
                             Spacer()
                             Button(action: {
-                                imageToEdit = EditableAsset(image: selectedImages[selectedIndex], index: selectedIndex)
+                                // Get the original image from the project if available
+                                let originalImage: UIImage
+                                if let project = currentProject, selectedIndex < project.originalImages.count {
+                                    originalImage = project.originalImages[selectedIndex]
+                                } else {
+                                    originalImage = selectedImages[selectedIndex]
+                                }
+                                imageToEdit = EditableAsset(image: selectedImages[selectedIndex], originalImage: originalImage, index: selectedIndex)
                             }) {
                                 Label("Edit", systemImage: "pencil.circle")
                                     .font(.subheadline.weight(.medium))

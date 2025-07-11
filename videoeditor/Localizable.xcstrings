@@ -179,9 +179,6 @@
     "Edit" : {
 
     },
-    "Edit Photo" : {
-
-    },
     "Enter a name for your new PDF project." : {
 
     },
@@ -492,9 +489,6 @@
     "Rename Project" : {
 
     },
-    "Reset" : {
-
-    },
     "Restore" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -509,7 +503,7 @@
     "Restore Purchases" : {
 
     },
-    "Rotate" : {
+    "Revert to Original" : {
 
     },
     "Save" : {

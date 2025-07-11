@@ -128,6 +128,7 @@ struct ContentView: View {
                         projectTitle: projectTitleBinding, // Pass the binding here
                         showTitleOnPDF: showTitleBinding, // Pass the new binding
                         imageToEdit: $imageToEdit,
+                        currentProject: currentProject,
                         onOrientationChange: {
                             updateProjectConfiguration()
                             generatePDF()
@@ -248,6 +249,15 @@ struct ContentView: View {
                 PhotoEditorView(asset: asset) { resultAsset in
                     if let resultAsset = resultAsset {
                         selectedImages[resultAsset.index] = resultAsset.image
+                        // Update the project with the new image while preserving original
+                        if let project = currentProject {
+                            project.updateImage(at: resultAsset.index, with: resultAsset.image)
+                            do {
+                                try modelContext.save()
+                            } catch {
+                                print("Failed to save image edit: \(error)")
+                            }
+                        }
                     }
                     imageToEdit = nil
                 }

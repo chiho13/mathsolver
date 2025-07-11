@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A48819132E213B4100A4B7DC /* Mantis in Frameworks */ = {isa = PBXBuildFile; productRef = A48819122E213B4100A4B7DC /* Mantis */; };
 		A4C17C0D2E1AB6E20082C004 /* storekiteditor.storekit in Resources */ = {isa = PBXBuildFile; fileRef = A4C17C0C2E1AB6E20082C004 /* storekiteditor.storekit */; };
 /* End PBXBuildFile section */
 
@@ -70,6 +71,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A48819132E213B4100A4B7DC /* Mantis in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -131,6 +133,7 @@
 			);
 			name = videoeditor;
 			packageProductDependencies = (
+				A48819122E213B4100A4B7DC /* Mantis */,
 			);
 			productName = videoeditor;
 			productReference = A4EEA29B2E01918E00AEE850 /* videoeditor.app */;
@@ -214,6 +217,9 @@
 			);
 			mainGroup = A4EEA2922E01918E00AEE850;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A48819112E213B4100A4B7DC /* XCRemoteSwiftPackageReference "Mantis" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A4EEA29C2E01918E00AEE850 /* Products */;
 			projectDirPath = "";
@@ -596,6 +602,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A48819112E213B4100A4B7DC /* XCRemoteSwiftPackageReference "Mantis" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/guoyingtao/Mantis.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.26.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A48819122E213B4100A4B7DC /* Mantis */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A48819112E213B4100A4B7DC /* XCRemoteSwiftPackageReference "Mantis" */;
+			productName = Mantis;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A4EEA2932E01918E00AEE850 /* Project object */;
 }
