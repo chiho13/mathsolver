@@ -30,6 +30,9 @@
         }
       }
     },
+    "Add New Project" : {
+
+    },
     "All Languages" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -95,6 +98,9 @@
       }
     },
     "Cards" : {
+
+    },
+    "Checking status..." : {
 
     },
     "Choose language pairs" : {
@@ -173,6 +179,9 @@
     "Edit" : {
 
     },
+    "Edit Photo" : {
+
+    },
     "Enter a name for your new PDF project." : {
 
     },
@@ -196,7 +205,10 @@
     "Everything You Need" : {
 
     },
-    "Free: Up to %lld photos" : {
+    "Export" : {
+
+    },
+    "Free limit: %lld photos per project" : {
 
     },
     "Get Started" : {
@@ -243,9 +255,6 @@
           }
         }
       }
-    },
-    "New Project" : {
-
     },
     "next" : {
       "extractionState" : "manual",
@@ -483,6 +492,9 @@
     "Rename Project" : {
 
     },
+    "Reset" : {
+
+    },
     "Restore" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -495,6 +507,9 @@
       }
     },
     "Restore Purchases" : {
+
+    },
+    "Rotate" : {
 
     },
     "Save" : {
@@ -558,9 +573,6 @@
         }
       }
     },
-    "Share" : {
-
-    },
     "Start for Free" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -586,7 +598,7 @@
         }
       }
     },
-    "Tap to begin creating your PDF" : {
+    "Tap to select photos and create a PDF" : {
 
     },
     "Terms of Service" : {
@@ -693,7 +705,7 @@
         }
       }
     },
-    "Upgrade for unlimited photos" : {
+    "Upgrade for Unlimited Photos" : {
 
     },
     "Upgrade to Premium" : {

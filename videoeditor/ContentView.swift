@@ -27,6 +27,7 @@ struct ContentView: View {
     @State private var photosPerPage = 1
     @State private var scrollToBottom = false
     @State private var addTextMode = false
+    @State private var imageToEdit: EditableAsset? = nil
     @EnvironmentObject private var iap: IAPManager
 
     var body: some View {
@@ -126,6 +127,7 @@ struct ContentView: View {
                         photosPerPage: $photosPerPage,
                         projectTitle: projectTitleBinding, // Pass the binding here
                         showTitleOnPDF: showTitleBinding, // Pass the new binding
+                        imageToEdit: $imageToEdit,
                         onOrientationChange: {
                             updateProjectConfiguration()
                             generatePDF()
@@ -242,6 +244,14 @@ struct ContentView: View {
             .fullScreenCover(isPresented: $showPremiumView) {
                 PremiumView(headline: "paywall-title")
             }
+            .fullScreenCover(item: $imageToEdit) { asset in
+                PhotoEditorView(asset: asset) { resultAsset in
+                    if let resultAsset = resultAsset {
+                        selectedImages[resultAsset.index] = resultAsset.image
+                    }
+                    imageToEdit = nil
+                }
+            }
             .toolbar {
                 // Back to Home button (when editing a project)
                 if currentProject != nil {
@@ -338,7 +348,7 @@ struct ContentView: View {
                                 HStack(spacing: 4) {
                                     Image(systemName: "square.and.arrow.up")
                                         .font(.system(size: 14, weight: .medium))
-                                    Text("Share")
+                                    Text("Export")
                                         .font(.system(size: 16, weight: .medium))
                                 }
                                 .foregroundColor(.white)

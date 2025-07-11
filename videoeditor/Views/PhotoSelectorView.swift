@@ -22,106 +22,121 @@ struct PhotoSelectorView: View {
             matching: .images,
             photoLibrary: .shared()
         ) {
-            VStack(spacing: 0) {
+            VStack {
                 Spacer()
                 
-                VStack(spacing: 12) {
-                    Image(systemName: "photo.on.rectangle.angled")
-                        .font(.system(size: 48, weight: .medium))
-                        .foregroundColor(.blue)
+                VStack(spacing: 24) {
+                    // MARK: - Icon
+                    ZStack {
+                        Image(systemName: "photo.on.rectangle.angled")
+                            .font(.system(size: 32, weight: .semibold))
+                            .foregroundColor(.white)
+
+                        ZStack {
+                            Circle().fill(Color.white)
+                                .frame(width: 22, height: 22)
+                            Image(systemName: "plus")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.blue)
+                        }
+                        .offset(x: 22, y: -22)
+                    }
+                    .frame(width: 72, height: 72)
+                    .background(
+                        LinearGradient(
+                            colors: [.blue, .cyan.opacity(0.8)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
                     
-                    VStack(spacing: 4) {
-                        Text("New Project")
-                            .font(.title2.bold())
+                    // MARK: - Title and Subtitle
+                    VStack(spacing: 8) {
+                        Text("Add New Project")
+                            .font(.title.bold())
                             .foregroundColor(.primary)
                         
-                        Text("Tap to begin creating your PDF")
-                            .font(.subheadline)
+                        Text("Tap to select photos and create a PDF")
+                            .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     
-                    // Premium limitation indicator (shown after premium status determined)
-                    if iapManager.didCheckPremium && !iapManager.isPremium {
-                        VStack(spacing: 8) {
-                            HStack {
-                                Image(systemName: "lock.fill")
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(.orange)
-                                Text("Free: Up to \(freeLimit) photos")
-                                    .font(.caption.bold())
-                                    .foregroundColor(.orange)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.orange.opacity(0.1))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-                                    )
-                            )
-                            
-                            Button(action: {
-                                // showPremiumAlert = true
-                                NotificationCenter.default.post(name: NSNotification.Name("ShowPremiumView"), object: nil)
-                            }) {
-                                Text("Upgrade for unlimited photos")
-                                    .font(.caption.bold())
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [.blue, .purple]),
-                                            startPoint: .leading,
-                                            endPoint: .trailing
+                    // MARK: - Premium Status Indicator
+                    if iapManager.didCheckPremium {
+                        if !iapManager.isPremium {
+                            VStack(spacing: 16) {
+                                HStack {
+                                    Image(systemName: "lock.fill")
+                                    Text("Free limit: \(freeLimit) photos per project")
+                                }
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                                
+                                Button(action: {
+                                    NotificationCenter.default.post(name: NSNotification.Name("ShowPremiumView"), object: nil)
+                                }) {
+                                    Text("Upgrade for Unlimited Photos")
+                                        .font(.headline)
+                                        .foregroundColor(.white)
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal, 24)
+                                        .frame(maxWidth: .infinity)
+                                        .background(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [.blue, .purple]),
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
                                         )
-                                    )
-                                    .cornerRadius(16)
+                                        .cornerRadius(16)
+                                        .shadow(color: .blue.opacity(0.4), radius: 8, y: 4)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
+                        } else {
+                            HStack(spacing: 8) {
+                                Image(systemName: "crown.fill")
+                                    .foregroundColor(.yellow)
+                                Text("Premium: Unlimited photos")
+                                    .fontWeight(.semibold)
+                            }
+                            .font(.callout)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.yellow.opacity(0.15))
+                            .cornerRadius(16)
                         }
-                    } else if iapManager.didCheckPremium {
-                        // Premium user indicator
-                        HStack {
-                            Image(systemName: "crown.fill")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.yellow)
-                            Text("Premium: Unlimited photos")
-                                .font(.caption.bold())
-                                .foregroundColor(.primary)
+                    } else {
+                        // Placeholder for layout consistency before premium check
+                        VStack {
+                            ProgressView()
+                            Text("Checking status...")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.yellow.opacity(0.1))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.yellow.opacity(0.3), lineWidth: 1)
-                                )
-                        )
+                        .padding(.vertical, 20)
                     }
                 }
-                .padding(.vertical, 32)
-                .padding(.horizontal, 24)
+                .padding(32)
                 .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.blue.opacity(0.08))
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color(UIColor.systemBackground))
+                        .shadow(color: colorScheme == .dark ? .white.opacity(0.05) : .black.opacity(0.08), radius: 12, x: 0, y: 5)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(Color.blue.opacity(0.2), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 24)
+                                .stroke(Color.gray.opacity(0.15), lineWidth: 1)
                         )
                 )
-                .shadow(color: Color.blue.opacity(0.1), radius: 8, x: 0, y: 4)
+                .padding(.horizontal, 24)
                 
                 Spacer()
+                Spacer() // Pushes the card up slightly from the center
             }
-            .padding(.horizontal, 40)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .offset(y: -40)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
