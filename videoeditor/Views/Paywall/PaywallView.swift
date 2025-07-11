@@ -201,21 +201,21 @@ private struct PlanCard: View {
                         
                         Spacer()
                         
-                        if let badge {
-                            Text(badge)
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 4)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [Color.orange, Color.red]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .clipShape(Capsule())
-                        }
+                        // if let badge {
+                        //     Text(badge)
+                        //         .font(.system(size: 12, weight: .bold))
+                        //         .foregroundColor(.white)
+                        //         .padding(.horizontal, 12)
+                        //         .padding(.vertical, 4)
+                        //         .background(
+                        //             LinearGradient(
+                        //                 gradient: Gradient(colors: [Color.orange, Color.red]),
+                        //                 startPoint: .leading,
+                        //                 endPoint: .trailing
+                        //             )
+                        //         )
+                        //         .clipShape(Capsule())
+                        // }
                     }
                     
                     Text(subtitle)
@@ -227,10 +227,10 @@ private struct PlanCard: View {
                             .font(.system(size: 28, weight: .bold))
                             .foregroundColor(.accentColor)
                         
-                        Text("billed annually")
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                            .offset(y: -2)
+                        // Text("billed annually")
+                        //     .font(.system(size: 12))
+                        //     .foregroundColor(.secondary)
+                        //     .offset(y: -2)
                     }
                 }
                 

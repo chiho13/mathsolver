@@ -175,6 +175,8 @@ struct ContentView: View {
                 NotificationCenter.default.addObserver(forName: NSNotification.Name("ShowPremiumView"), object: nil, queue: .main) { _ in
                     showPremiumView = true
                 }
+                //
+                // UserDefaults.resetDefaults()
             }
             .onChange(of: selectedImages) { _ in
                 if selectedImages.isEmpty {
@@ -330,7 +332,9 @@ struct ContentView: View {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         HStack(spacing: 8) {
                             // Share Button
-                            ShareLink(item: pdfURL) {
+                            Button(action: {
+                                sharePDF()
+                            }) {
                                 HStack(spacing: 4) {
                                     Image(systemName: "square.and.arrow.up")
                                         .font(.system(size: 14, weight: .medium))
@@ -532,7 +536,8 @@ struct ContentView: View {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd_HHmmss"
         let timestampString = dateFormatter.string(from: Date())
-        let filename = "Photos_\(timestampString)_\(selectedImages.count).pdf"
+        let projectTitle = project.title.isEmpty ? "Untitled" : project.title
+        let filename = "\(projectTitle)_\(timestampString)_\(selectedImages.count).pdf"
         
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
         do {
@@ -542,5 +547,56 @@ struct ContentView: View {
             print("Failed to write PDF data: \(error)")
         }
     }
+    
+    private func sharePDF() {
+        guard let pdfURL = pdfURL else { return }
+        
+        // Ensure file exists and is readable
+        guard FileManager.default.fileExists(atPath: pdfURL.path) else {
+            print("PDF file not found at path: \(pdfURL.path)")
+            return
+        }
+        
+        let activityVC = UIActivityViewController(
+            activityItems: [pdfURL],
+            applicationActivities: nil
+        )
+        
+        // For iPad - set popover presentation
+        if let popover = activityVC.popoverPresentationController {
+            // Find the root view controller to get the proper source view
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first,
+               let rootViewController = window.rootViewController {
+                popover.sourceView = rootViewController.view
+                popover.sourceRect = CGRect(x: rootViewController.view.bounds.midX, y: rootViewController.view.bounds.midY, width: 0, height: 0)
+                popover.permittedArrowDirections = []
+            }
+        }
+        
+        // Present the share sheet
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first,
+           let rootViewController = window.rootViewController {
+            
+            // Find the topmost presented view controller
+            var topController = rootViewController
+            while let presentedViewController = topController.presentedViewController {
+                topController = presentedViewController
+            }
+            
+            topController.present(activityVC, animated: true, completion: nil)
+        }
+    }
 }
 
+
+extension UserDefaults {
+    static func resetDefaults() {
+        let defaults = UserDefaults.standard
+        let dictionary = defaults.dictionaryRepresentation()
+        dictionary.keys.forEach { key in
+            defaults.removeObject(forKey: key)
+        }
+    }
+}

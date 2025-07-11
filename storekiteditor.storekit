@@ -20,7 +20,7 @@
     "_applicationInternalID" : "6748277988",
     "_developerTeamID" : "CYL68JMKHB",
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 773587319.84317601,
+    "_lastSynchronizedDate" : 773698988.23645902,
     "_locale" : "en_US",
     "_storefront" : "USA",
     "_storeKitErrors" : [
@@ -84,9 +84,20 @@
 
           ],
           "codeOffers" : [
-
+            {
+              "displayPrice" : "1.99",
+              "eligibility" : [
+                "new"
+              ],
+              "internalID" : "B47B2F58",
+              "isStackable" : true,
+              "numberOfPeriods" : 1,
+              "paymentMode" : "payAsYouGo",
+              "referenceName" : "80% off",
+              "subscriptionPeriod" : "P1Y"
+            }
           ],
-          "displayPrice" : "17.99",
+          "displayPrice" : "12.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "6748278097",
