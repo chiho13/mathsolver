@@ -35,22 +35,9 @@
 		A4EEA2B42E01919100AEE850 /* videoeditorUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = videoeditorUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A4EEA2D72E01967B00AEE850 /* Exceptions for "videoeditor" folder in "videoeditor" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = A4EEA29A2E01918E00AEE850 /* videoeditor */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A4EEA29D2E01918E00AEE850 /* videoeditor */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				A4EEA2D72E01967B00AEE850 /* Exceptions for "videoeditor" folder in "videoeditor" target */,
-			);
 			path = videoeditor;
 			sourceTree = "<group>";
 		};

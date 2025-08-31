@@ -7,16 +7,10 @@
     " Privacy Policy." : {
 
     },
-    "%lld" : {
-
-    },
     "%lld." : {
 
     },
     "•" : {
-
-    },
-    "2x2" : {
 
     },
     "7 Days FREE" : {
@@ -30,9 +24,6 @@
         }
       }
     },
-    "Add New Project" : {
-
-    },
     "All Languages" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -43,9 +34,6 @@
           }
         }
       }
-    },
-    "All Projects" : {
-
     },
     "Annual PRO" : {
       "extractionState" : "manual",
@@ -59,9 +47,6 @@
       }
     },
     "Are you sure you want to delete \"%@\"?" : {
-
-    },
-    "Are you sure you want to delete \"%@\"? This action cannot be undone." : {
 
     },
     "Are you sure?" : {
@@ -101,12 +86,6 @@
       }
     },
     "Capture Photo" : {
-
-    },
-    "Cards" : {
-
-    },
-    "Checking status..." : {
 
     },
     "Choose language pairs" : {
@@ -153,12 +132,6 @@
         }
       }
     },
-    "Create" : {
-
-    },
-    "Create New Project" : {
-
-    },
     "Create professional PDFs from your photos" : {
 
     },
@@ -173,27 +146,6 @@
         }
       }
     },
-    "Delete Project" : {
-
-    },
-    "Delete Project?" : {
-
-    },
-    "Done" : {
-
-    },
-    "Edit" : {
-
-    },
-    "Enter a name for your new PDF project." : {
-
-    },
-    "Enter a new name for \"%@\"." : {
-
-    },
-    "Enter new name" : {
-
-    },
     "Error" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -206,9 +158,6 @@
       }
     },
     "Everything You Need" : {
-
-    },
-    "Free limit: %lld photos per project" : {
 
     },
     "Get Started" : {
@@ -228,9 +177,6 @@
     "Join thousands of users who create professional PDFs every day" : {
 
     },
-    "Landscape" : {
-
-    },
     "Language Settings" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -241,9 +187,6 @@
           }
         }
       }
-    },
-    "List" : {
-
     },
     "Math Solver" : {
 
@@ -271,9 +214,6 @@
       }
     },
     "Next" : {
-
-    },
-    "No Images" : {
 
     },
     "OK" : {
@@ -341,9 +281,6 @@
           }
         }
       }
-    },
-    "One Photo" : {
-
     },
     "Open Settings" : {
       "extractionState" : "manual",
@@ -436,15 +373,6 @@
     "PDF Reporter" : {
 
     },
-    "Photo Limit Reached" : {
-
-    },
-    "Portrait" : {
-
-    },
-    "Premium: Unlimited photos" : {
-
-    },
     "Privacy Policy" : {
 
     },
@@ -457,15 +385,6 @@
     "Processing your purchase" : {
 
     },
-    "Project name" : {
-
-    },
-    "Project Title" : {
-
-    },
-    "Recent Projects" : {
-
-    },
     "Recently Used" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -476,21 +395,6 @@
           }
         }
       }
-    },
-    "Remove" : {
-
-    },
-    "Remove All" : {
-
-    },
-    "Remove All Photos?" : {
-
-    },
-    "Rename" : {
-
-    },
-    "Rename Project" : {
-
     },
     "Restore" : {
       "extractionState" : "manual",
@@ -507,9 +411,6 @@
 
     },
     "Retake Photo" : {
-
-    },
-    "Save" : {
 
     },
     "Search for places, news, or tips..." : {
@@ -555,9 +456,6 @@
           }
         }
       }
-    },
-    "See All" : {
-
     },
     "Select a photo of a math problem" : {
 
@@ -610,9 +508,6 @@
         }
       }
     },
-    "Tap to select photos and create a PDF" : {
-
-    },
     "Terms of Service" : {
 
     },
@@ -626,9 +521,6 @@
           }
         }
       }
-    },
-    "The free version allows up to %lld photos. Please upgrade for unlimited photos." : {
-
     },
     "The Local Finder" : {
       "extractionState" : "manual",
@@ -683,12 +575,6 @@
         }
       }
     },
-    "This will delete the project and all photos." : {
-
-    },
-    "Title:" : {
-
-    },
     "To enable real-time translation, we need access to your microphone. Please enable microphone access in Settings to use this feature." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -699,9 +585,6 @@
           }
         }
       }
-    },
-    "Two Photos" : {
-
     },
     "Unlimited" : {
 
@@ -716,18 +599,6 @@
           }
         }
       }
-    },
-    "Upgrade for Unlimited Photos" : {
-
-    },
-    "Upgrade to Premium" : {
-
-    },
-    "Upgrade to Premium to select unlimited photos and unlock all features!" : {
-
-    },
-    "View Mode" : {
-
     },
     "Weekly PRO" : {
       "extractionState" : "manual",

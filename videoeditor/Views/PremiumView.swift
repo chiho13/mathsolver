@@ -16,7 +16,6 @@
 import Foundation
 import SwiftUI
 
-
 struct BubbleBackgroundPayWallView: View {
     var body: some View {
         GeometryReader { geo in

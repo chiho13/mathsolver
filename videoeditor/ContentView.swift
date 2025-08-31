@@ -5,8 +5,6 @@ import PhotosUI
 import UniformTypeIdentifiers
 import AVFoundation
 
-
-
 struct ContentView: View {
     @StateObject private var viewModel = VisionViewModel()
     @State private var isLoading: Bool = false
