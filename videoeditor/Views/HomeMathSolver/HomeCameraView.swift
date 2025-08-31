@@ -111,7 +111,7 @@ struct CameraView: UIViewControllerRepresentable {
         overlayView.backgroundColor = UIColor.black.withAlphaComponent(0.6)
         
         // Define the rectangular capture area using device screen dimensions
-        let cornerRadius: CGFloat = 4.0
+        let cornerRadius: CGFloat = 8.0
         let screenBounds = UIScreen.main.bounds
         let screenWidth = screenBounds.width
         let screenHeight = screenBounds.height
@@ -123,7 +123,7 @@ struct CameraView: UIViewControllerRepresentable {
         let rectX = (screenWidth - rectWidth) / 2.0
         
         // Center vertically in the screen, then move up 50px
-        let rectY = (screenHeight - rectHeight) / 2.0 - 50.0
+        let rectY = (screenHeight - rectHeight) / 2.0 - 40.0
         
         let captureRect = CGRect(x: rectX, y: rectY, width: rectWidth, height: rectHeight)
         context.coordinator.captureRect = captureRect
@@ -140,8 +140,8 @@ struct CameraView: UIViewControllerRepresentable {
         
         // Add corner brackets for the cutout
         let bracketLength: CGFloat = 20.0
-        let bracketWidth: CGFloat = 3.0
-        let bracketCornerRadius: CGFloat = 4.0
+        let bracketWidth: CGFloat = 4.0
+        let bracketCornerRadius: CGFloat = 8.0
         
         // Top-left bracket
         let topLeftBracket = CAShapeLayer()

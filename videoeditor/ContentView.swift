@@ -130,6 +130,45 @@ struct ContentView: View {
 
                     Spacer()
                 }
+
+                 VStack {
+                                    // Top gradient with multiple stops
+                                    LinearGradient(
+                                        gradient: Gradient(stops: [
+                                            .init(color: Color.white.opacity(0.2), location: 0.0),
+                                            .init(color: Color.white.opacity(0.16), location: 0.15),
+                                            .init(color: Color.white.opacity(0.12), location: 0.3),
+                                            .init(color: Color.white.opacity(0.08), location: 0.45),
+                                            .init(color: Color.white.opacity(0.05), location: 0.6),
+                                            .init(color: Color.white.opacity(0.03), location: 0.75),
+                                            .init(color: Color.white.opacity(0.01), location: 0.9),
+                                            .init(color: Color.white.opacity(0.0), location: 1.0)
+                                        ]),
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                    .frame(height: 200)
+                                    
+                                    Spacer()
+                                    
+                                    // Bottom gradient with multiple stops
+                                    LinearGradient(
+                                        gradient: Gradient(stops: [
+                                            .init(color: Color.white.opacity(0.0), location: 0.0),
+                                            .init(color: Color.white.opacity(0.015), location: 0.1),
+                                            .init(color: Color.white.opacity(0.045), location: 0.25),
+                                            .init(color: Color.white.opacity(0.075), location: 0.4),
+                                            .init(color: Color.white.opacity(0.12), location: 0.55),
+                                            .init(color: Color.white.opacity(0.18), location: 0.7),
+                                            .init(color: Color.white.opacity(0.22), location: 0.85),
+                                            .init(color: Color.white.opacity(0.25), location: 1.0)
+                                        ]),
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                    .frame(height: 300)
+                                }
+                                .ignoresSafeArea(.all)
             }
             .onAppear {
                 checkCameraAuthorization()
