@@ -5,315 +5,147 @@ import PhotosUI
 import UniformTypeIdentifiers
 import AVFoundation
 
+
+
 struct ContentView: View {
-    @State private var query: String = ""
+    @StateObject private var viewModel = VisionViewModel()
     @State private var isLoading: Bool = false
     @State private var errorMessage: String? = nil
-    @StateObject private var searchService = SearchAPIService()
-    @State private var searchOutput: String? = nil
-    @StateObject private var languageSettings = LanguageSettingsViewModel()
-    @FocusState private var isTextFieldFocused: Bool
-    @State private var showSidebar: Bool = false
     @State private var showPremiumView: Bool = false
-    @Environment(\.modelContext) private var modelContext
-    @State private var searchHistory: SearchHistoryManager?
-    @State private var selectedPickerItems: [PhotosPickerItem] = []
-    @State private var selectedImages: [UIImage] = []
-    @State private var currentProject: PDFProject?
-    @State private var showResetConfirmation = false
-    @State private var pdfURL: URL?
-    @State private var isLandscape = false
-    @State private var showPhotoStrip = false
-    @State private var photosPerPage = 1
-    @State private var scrollToBottom = false
-    @State private var addTextMode = false
-    @State private var imageToEdit: EditableAsset? = nil
     @EnvironmentObject private var iap: IAPManager
+    @State private var isCameraAuthorized: Bool = false
+    @State private var capturedImage: UIImage? = nil
+
+    // Predefined prompt for math solving
+    private let mathPrompt = "Solve the math problem in the image"
 
     var body: some View {
         NavigationView {
             ZStack {
-                // Main content
                 LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.15), Color.purple.opacity(0.10)]), startPoint: .topLeading, endPoint: .bottomTrailing)
                     .ignoresSafeArea()
                     .onTapGesture {
                         UIApplication.shared.endEditing()
                     }
                 
-                VStack(spacing: 0) {
-                    if let pdfURL = pdfURL, currentProject != nil {
-                        PDFAnnotationView(url: pdfURL, addTextMode: $addTextMode) {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                showPhotoStrip = false
+                VStack(spacing: 20) {
+                    if isCameraAuthorized {
+                        if let image = capturedImage {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFit()
+                                .cornerRadius(10)
+                                .padding()
+                        } else {
+                            CameraView(capturedImage: $capturedImage)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .ignoresSafeArea(.all)
+                        }
+                    } else {
+                        VStack {
+                            Image(systemName: "camera.fill")
+                                .font(.largeTitle)
+                                .padding(.bottom)
+                            Text("Camera access is required to solve math problems")
+                                .font(.headline)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color(.secondarySystemBackground))
+                        .cornerRadius(10)
+                        .padding()
+                    }
+
+                    if isCameraAuthorized && capturedImage == nil {
+                        Button(action: {
+                            // Trigger capture in CameraView
+                            NotificationCenter.default.post(name: NSNotification.Name("CapturePhoto"), object: nil)
+                        }) {
+                            Label("Capture Photo", systemImage: "camera")
+                                .font(.headline)
+                                .padding()
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .padding(.horizontal)
+                    }
+
+                    if let image = capturedImage {
+                        Button(action: {
+                            Task {
+                                viewModel.selectedImage = image
+                                viewModel.prompt = mathPrompt
+                                await viewModel.performVisionRequest()
+                            }
+                        }) {
+                            if viewModel.isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .frame(height: 20)
+                            } else {
+                                Text("Solve Math Problem")
+                                    .font(.headline)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
                             }
                         }
-                        .id("\(pdfURL.absoluteString)_\(isLandscape)_\(photosPerPage)_\(selectedImages.count)")
-                        .padding(.top, 10)
-                        .padding(.bottom, showPhotoStrip ? 356 : 40)
-                        .padding(.horizontal, 10)
-                        .animation(.easeInOut(duration: 0.3), value: showPhotoStrip)
-                        .ignoresSafeArea(.keyboard)
-                    } else if let errorMessage = errorMessage {
-                        VStack {
-                            Spacer()
-                            Text(errorMessage)
-                                .foregroundColor(.red)
-                                .multilineTextAlignment(.center)
+                        .buttonStyle(.borderedProminent)
+                        .disabled(viewModel.isLoading)
+                        .padding(.horizontal)
+
+                        // Button to retake photo
+                        Button(action: {
+                            capturedImage = nil
+                            viewModel.visionResponse = ""
+                            viewModel.errorMessage = nil
+                        }) {
+                            Text("Retake Photo")
+                                .font(.headline)
                                 .padding()
-                                .background(Color.white.opacity(0.8))
-                                .cornerRadius(12)
-                                .shadow(radius: 4)
-                            Spacer()
+                                .frame(maxWidth: .infinity)
                         }
-                    } else if isLoading {
-                        VStack {
-                            Spacer()
-                            LoadingThreeBalls(color: .blue)
-                            Text("Searching...")
-                                .foregroundColor(.blue)
-                                .font(.subheadline)
-                            Spacer()
-                        }
-                    } else if searchOutput != nil {
-                        // This case is now less likely to be visible, might need rethinking if search is a primary feature
-                        SearchResultsView(searchOutput: searchOutput!)
-                    } else {
-                        HomeView(selectedPickerItems: $selectedPickerItems, selectedImages: $selectedImages, currentProject: $currentProject)
+                        .buttonStyle(.bordered)
+                        .padding(.horizontal)
                     }
-                }
-                .animation(.easeInOut, value: pdfURL)
-                
-                // Sidebar overlay
-                // if showSidebar, let searchHistory = searchHistory {
-                //     SidebarView(
-                //         showSidebar: $showSidebar,
-                //         searchHistory: searchHistory,
-                //         query: $query,
-                //         searchOutput: $searchOutput
-                //     )
-                //     .zIndex(1)
-                // }
-            }
-            .overlay(alignment: .bottomTrailing) {
-                if !selectedImages.isEmpty {
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            showPhotoStrip.toggle()
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: showPhotoStrip ? "chevron.down" : "slider.horizontal.3")
-                            Text(showPhotoStrip ? "Done" : "Edit")
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(showPhotoStrip ? Color.gray.opacity(0.8) : Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(20)
-                        .shadow(radius: 4)
-                    }
+
+                    if viewModel.isLoading {
+                        ProgressView("Solving...")
                     .padding()
-                    .padding(.bottom, showPhotoStrip ? 336 : 20) // Move up when overlay is visible
-                    .animation(.easeInOut(duration: 0.3), value: showPhotoStrip)
-                }
-            }
-            .overlay(alignment: .bottom) {
-                if !selectedImages.isEmpty && showPhotoStrip {
-                    PhotoStripOverlayView(
-                        selectedPickerItems: $selectedPickerItems,
-                        selectedImages: $selectedImages,
-                        showResetConfirmation: $showResetConfirmation,
-                        isLandscape: $isLandscape,
-                        photosPerPage: $photosPerPage,
-                        projectTitle: projectTitleBinding, // Pass the binding here
-                        showTitleOnPDF: showTitleBinding, // Pass the new binding
-                        imageToEdit: $imageToEdit,
-                        onOrientationChange: {
-                            updateProjectConfiguration()
-                            generatePDF()
-                        },
-                        onPhotosPerPageChange: {
-                            updateProjectConfiguration()
-                            generatePDF()
-                        },
-                        onPhotosAdded: generatePDF,
-                        onTitleVisibilityChange: {
-                            updateProjectConfiguration()
-                            generatePDF()
+                    }
+
+                    if !viewModel.visionResponse.isEmpty {
+                        ScrollView {
+                            Text(viewModel.visionResponse)
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(.secondarySystemBackground))
+                                .cornerRadius(10)
                         }
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .padding()
+                    }
+
+                    if let errorMessage = viewModel.errorMessage ?? errorMessage {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .padding()
+                    }
+
+                    Spacer()
                 }
             }
-            // Bottom-leading annotation toggle (opposite the Edit/Hide button)
-            // .overlay(alignment: .bottomLeading) {
-            //     if pdfURL != nil {
-            //         Button(action: {
-            //             addTextMode.toggle()
-            //         }) {
-            //             HStack {
-            //                 Image(systemName: addTextMode ? "pencil.slash" : "pencil")
-            //                 Text(addTextMode ? "Done" : "Annotate")
-            //             }
-            //             .padding(.horizontal, 12)
-            //             .padding(.vertical, 8)
-            //             .background(addTextMode ? Color.orange.opacity(0.8) : Color.orange)
-            //             .foregroundColor(.white)
-            //             .cornerRadius(20)
-            //             .shadow(radius: 4)
-            //         }
-            //         .padding()
-            //         .padding(.bottom, showPhotoStrip ? 270 : 20)
-            //         .animation(.easeInOut(duration: 0.3), value: showPhotoStrip)
-            //     }
-            // }
-            .ignoresSafeArea(.container, edges: .bottom)
             .onAppear {
-                if searchHistory == nil {
-                    searchHistory = SearchHistoryManager(modelContext: modelContext)
-                }
-                
-                // Listen for premium upgrade notifications
+                checkCameraAuthorization()
                 NotificationCenter.default.addObserver(forName: NSNotification.Name("ShowPremiumView"), object: nil, queue: .main) { _ in
                     showPremiumView = true
                 }
-                //
-                // UserDefaults.resetDefaults()
             }
-            .onChange(of: selectedImages) { _ in
-                if selectedImages.isEmpty {
-                    // Auto-delete empty project and return to home
-                    if let project = currentProject {
-                        modelContext.delete(project)
-                        do {
-                            try modelContext.save()
-                            print("Empty project '\(project.title)' deleted automatically")
-                        } catch {
-                            print("Failed to delete empty project: \(error)")
-                        }
-                    }
-                    
-                    // Clear editor state and return to home
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        currentProject = nil
-                        pdfURL = nil
-                        showPhotoStrip = false
-                        addTextMode = false
-                    }
-                } else {
-                    // Update project with new images
-                    if let project = currentProject {
-                        project.updateImages(selectedImages)
-                        project.updateConfiguration(isLandscape: isLandscape, photosPerPage: photosPerPage)
-                        do {
-                            try modelContext.save()
-                        } catch {
-                            print("Failed to save project updates: \(error)")
-                        }
-                    }
-                    generatePDF()
-                    showPhotoStrip = true
-                }
+            .onDisappear {
+                NotificationCenter.default.removeObserver(self, name: NSNotification.Name("ShowPremiumView"), object: nil)
             }
-            .onChange(of: selectedPickerItems) { newItems in
-                // Only process photos if we already have a current project
-                // (Photos from new project creation are handled in PhotoSelectorView)
-                guard currentProject != nil else { return }
-                
-                Task {
-                    for item in newItems {
-                        if let data = try? await item.loadTransferable(type: Data.self),
-                           let uiImage = UIImage(data: data) {
-                            await MainActor.run {
-                                self.selectedImages.append(uiImage)
-                            }
-                        }
-                    }
-                    await MainActor.run {
-                        selectedPickerItems = []
-                        // Force PDF regeneration after adding new photos
-                        if !selectedImages.isEmpty {
-                            generatePDF()
-                        }
-                    }
-                }
-            }
-            .animation(.easeInOut, value: !selectedImages.isEmpty)
-            .animation(.easeInOut(duration: 0.3), value: showSidebar)
-            .navigationBarTitleDisplayMode(.inline)
             .fullScreenCover(isPresented: $showPremiumView) {
                 PremiumView(headline: "paywall-title")
             }
-            .fullScreenCover(item: $imageToEdit) { asset in
-                PhotoEditorView(asset: asset) { resultAsset in
-                    if let resultAsset = resultAsset {
-                        selectedImages[resultAsset.index] = resultAsset.image
-                    }
-                    imageToEdit = nil
-                }
-            }
             .toolbar {
-                // Back to Home button (when editing a project)
-                if currentProject != nil {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                // Auto-save current state before going back
-                                if let project = currentProject {
-                                    project.updateImages(selectedImages)
-                                    project.updateConfiguration(isLandscape: isLandscape, photosPerPage: photosPerPage)
-                                    do {
-                                        try modelContext.save()
-                                        print("Project '\(project.title)' saved automatically")
-                                    } catch {
-                                        print("Failed to auto-save project: \(error)")
-                                    }
-                                }
-                                
-                                // Clear editor state and return to home
-                                currentProject = nil
-                                selectedImages = []
-                                pdfURL = nil
-                                showPhotoStrip = false
-                                addTextMode = false
-                            }
-                        }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 14, weight: .medium))
-                                Text("Projects")
-                                    .font(.system(size: 16, weight: .medium))
-                            }
-                            .foregroundColor(.blue)
-                        }
-                        .padding(.top, 8)
-                    }
-                }
-                
-                // ToolbarItem(placement: .navigationBarLeading) {
-                //     Button(action: {
-                //         withAnimation(.easeInOut(duration: 0.1)) {
-                //             showSidebar = true
-                //         }
-                //     }) {
-                //         Image(systemName: "sidebar.left")
-                //             .font(.system(size: 16, weight: .medium))
-                //             .foregroundColor(.blue)
-                //             .shadow(color: Color.black.opacity(0.15), radius: 1, x: 0, y: 1)
-                //             .contentShape(Rectangle())
-                //             .padding(8)
-                //             .background(
-                //                 RoundedRectangle(cornerRadius: 8)
-                //                     .fill(Color.white.opacity(0.8))
-                //                     .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                //             )
-                //     }
-                //     .padding(.top, 8)
-                //     .opacity(showSidebar ? 0 : 1)
-                // }
-                
-
-                // Upgrade button (hidden when user is already premium)
                 if iap.didCheckPremium && !iap.isPremium {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button(action: {
@@ -332,274 +164,310 @@ struct ContentView: View {
                         }
                         .padding(.top, 8)
                         .padding(.bottom, 8)
-                        .padding(.leading, pdfURL != nil ? 8 : 0)
                         .opacity(showPremiumView ? 0 : 1)
                     }
                 }
+            }
+        }
+    }
 
-                // PDF Control Buttons (when PDF is available)
-                if let pdfURL = pdfURL {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        HStack(spacing: 8) {
-                            // Share Button
-                            Button(action: {
-                                sharePDF()
-                            }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "square.and.arrow.up")
-                                        .font(.system(size: 14, weight: .medium))
-                                    Text("Export")
-                                        .font(.system(size: 16, weight: .medium))
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    LinearGradient(gradient: Gradient(colors: [.blue, .blue.opacity(0.8)]), startPoint: .leading, endPoint: .trailing)
-                                )
-                                .cornerRadius(8)
-                            }
-                        }
-                        .padding(.top, 8)
-                         .padding(.bottom, 8)
-                        .padding(.trailing, -8)
+    private func checkCameraAuthorization() {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            isCameraAuthorized = true
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    isCameraAuthorized = granted
+                    if !granted {
+                        errorMessage = "Please enable camera access in Settings to use the math solver."
                     }
                 }
-                
             }
-        }
-    }
-
-    private var projectTitleBinding: Binding<String> {
-        Binding<String>(
-            get: { self.currentProject?.title ?? "Untitled" },
-            set: { self.currentProject?.title = $0 }
-        )
-    }
-
-    private var showTitleBinding: Binding<Bool> {
-        Binding<Bool>(
-            get: { self.currentProject?.showTitle ?? true },
-            set: { self.currentProject?.showTitle = $0 }
-        )
-    }
-
-    private func updateProjectConfiguration() {
-        guard let project = currentProject else { return }
-        project.updateConfiguration(title: project.title, isLandscape: isLandscape, photosPerPage: photosPerPage, showTitle: project.showTitle)
-        do {
-            try modelContext.save()
-        } catch {
-            print("Failed to save configuration: \(error)")
-        }
-    }
-
-    private func generatePDF() {
-        guard let project = currentProject else {
-            errorMessage = "No active project to generate PDF for."
-            return
-        }
-        guard !selectedImages.isEmpty else { return }
-        print("Generating PDF with \(selectedImages.count) images")
-        let pdfData = NSMutableData()
-        // A4 paper size in points (210mm x 297mm)
-        var pageRect = CGRect(x: 0, y: 0, width: 595, height: 842)
-        if isLandscape {
-            pageRect = CGRect(x: 0, y: 0, width: 842, height: 595)
-        }
-        let margin: CGFloat = 36.0 // 0.5 inch margin
-        let imageableArea = pageRect.insetBy(dx: margin, dy: margin)
-
-        UIGraphicsBeginPDFContextToData(pdfData, pageRect, nil)
-        
-        let titleFont = UIFont.systemFont(ofSize: 24, weight: .bold)
-        let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: titleFont,
-            .foregroundColor: UIColor.black
-        ]
-        
-        if photosPerPage == 1 {
-            // One photo per page
-            for (index, img) in selectedImages.enumerated() {
-                UIGraphicsBeginPDFPageWithInfo(pageRect, nil)
-                var currentPageImageableArea = imageableArea
-                
-                // If it's the first page and title is enabled, draw title and adjust area
-                if index == 0 && project.showTitle {
-                    let title = project.title
-                    let titleSize = title.size(withAttributes: titleAttributes)
-                    let titleRect = CGRect(x: (pageRect.width - titleSize.width) / 2.0,
-                                           y: imageableArea.minY,
-                                           width: titleSize.width,
-                                           height: titleSize.height)
-                    title.draw(in: titleRect, withAttributes: titleAttributes)
-                    
-                    // Adjust imageable area for the image below the title
-                    currentPageImageableArea.origin.y += titleSize.height + 20 // 20 points padding
-                    currentPageImageableArea.size.height -= titleSize.height + 20
-                }
-                
-                let aspectFitRect = AVMakeRect(aspectRatio: img.size, insideRect: currentPageImageableArea)
-                img.draw(in: aspectFitRect)
-            }
-        } else if photosPerPage == 2 {
-            // Two photos per page
-            for i in stride(from: 0, to: selectedImages.count, by: 2) {
-                UIGraphicsBeginPDFPageWithInfo(pageRect, nil)
-                var currentPageImageableArea = imageableArea
-
-                // If it's the first page and title is enabled, draw title and adjust area
-                if i == 0 && project.showTitle {
-                    let title = project.title
-                    let titleSize = title.size(withAttributes: titleAttributes)
-                    let titleRect = CGRect(x: (pageRect.width - titleSize.width) / 2.0,
-                                           y: imageableArea.minY,
-                                           width: titleSize.width,
-                                           height: titleSize.height)
-                    title.draw(in: titleRect, withAttributes: titleAttributes)
-                    
-                    currentPageImageableArea.origin.y += titleSize.height + 20
-                    currentPageImageableArea.size.height -= titleSize.height + 20
-                }
-                
-                let firstImage = selectedImages[i]
-                let spacing: CGFloat = 20
-                
-                if i + 1 < selectedImages.count {
-                    let secondImage = selectedImages[i + 1]
-                    let availableHeight = currentPageImageableArea.height - spacing
-                    let halfHeight = availableHeight / 2
-                    
-                    let topRect = CGRect(x: currentPageImageableArea.minX, y: currentPageImageableArea.minY,
-                                       width: currentPageImageableArea.width, height: halfHeight)
-                    let topAspectFitRect = AVMakeRect(aspectRatio: firstImage.size, insideRect: topRect)
-                    firstImage.draw(in: topAspectFitRect)
-                    
-                    let bottomRect = CGRect(x: currentPageImageableArea.minX, y: currentPageImageableArea.minY + halfHeight + spacing,
-                                          width: currentPageImageableArea.width, height: halfHeight)
-                    let bottomAspectFitRect = AVMakeRect(aspectRatio: secondImage.size, insideRect: bottomRect)
-                    secondImage.draw(in: bottomAspectFitRect)
-                } else {
-                    let aspectFitRect = AVMakeRect(aspectRatio: firstImage.size, insideRect: currentPageImageableArea)
-                    firstImage.draw(in: aspectFitRect)
-                }
-            }
-        } else if photosPerPage == 4 {
-            // 2x2 grid - four photos per page
-            for i in stride(from: 0, to: selectedImages.count, by: 4) {
-                UIGraphicsBeginPDFPageWithInfo(pageRect, nil)
-                var currentPageImageableArea = imageableArea
-
-                // If it's the first page and title is enabled, draw title and adjust area
-                if i == 0 && project.showTitle {
-                    let title = project.title
-                    let titleSize = title.size(withAttributes: titleAttributes)
-                    let titleRect = CGRect(x: (pageRect.width - titleSize.width) / 2.0,
-                                           y: imageableArea.minY,
-                                           width: titleSize.width,
-                                           height: titleSize.height)
-                    title.draw(in: titleRect, withAttributes: titleAttributes)
-                    
-                    currentPageImageableArea.origin.y += titleSize.height + 20
-                    currentPageImageableArea.size.height -= titleSize.height + 20
-                }
-                
-                let spacing: CGFloat = 15
-                let availableWidth = currentPageImageableArea.width - spacing
-                let availableHeight = currentPageImageableArea.height - spacing
-                let halfWidth = availableWidth / 2
-                let halfHeight = availableHeight / 2
-                
-                if i < selectedImages.count {
-                    let topLeftRect = CGRect(x: currentPageImageableArea.minX, y: currentPageImageableArea.minY,
-                                           width: halfWidth, height: halfHeight)
-                    let topLeftAspectFitRect = AVMakeRect(aspectRatio: selectedImages[i].size, insideRect: topLeftRect)
-                    selectedImages[i].draw(in: topLeftAspectFitRect)
-                }
-                
-                if i + 1 < selectedImages.count {
-                    let topRightRect = CGRect(x: currentPageImageableArea.minX + halfWidth + spacing, y: currentPageImageableArea.minY,
-                                            width: halfWidth, height: halfHeight)
-                    let topRightAspectFitRect = AVMakeRect(aspectRatio: selectedImages[i+1].size, insideRect: topRightRect)
-                    selectedImages[i+1].draw(in: topRightAspectFitRect)
-                }
-                
-                if i + 2 < selectedImages.count {
-                    let bottomLeftRect = CGRect(x: currentPageImageableArea.minX, y: currentPageImageableArea.minY + halfHeight + spacing,
-                                              width: halfWidth, height: halfHeight)
-                    let bottomLeftAspectFitRect = AVMakeRect(aspectRatio: selectedImages[i+2].size, insideRect: bottomLeftRect)
-                    selectedImages[i+2].draw(in: bottomLeftAspectFitRect)
-                }
-                
-                if i + 3 < selectedImages.count {
-                    let bottomRightRect = CGRect(x: currentPageImageableArea.minX + halfWidth + spacing, y: currentPageImageableArea.minY + halfHeight + spacing,
-                                               width: halfWidth, height: halfHeight)
-                    let bottomRightAspectFitRect = AVMakeRect(aspectRatio: selectedImages[i+3].size, insideRect: bottomRightRect)
-                    selectedImages[i+3].draw(in: bottomRightAspectFitRect)
-                }
-            }
-        }
-        
-        UIGraphicsEndPDFContext()
-
-        // Create filename with today's date and timestamp to ensure uniqueness
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd_HHmmss"
-        let timestampString = dateFormatter.string(from: Date())
-        let projectTitle = project.title.isEmpty ? "Untitled" : project.title
-        let filename = "\(projectTitle)_\(timestampString)_\(selectedImages.count).pdf"
-        
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-        do {
-            try pdfData.write(to: url, atomically: true)
-            pdfURL = url
-        } catch {
-            print("Failed to write PDF data: \(error)")
-        }
-    }
-    
-    private func sharePDF() {
-        guard let pdfURL = pdfURL else { return }
-        
-        // Ensure file exists and is readable
-        guard FileManager.default.fileExists(atPath: pdfURL.path) else {
-            print("PDF file not found at path: \(pdfURL.path)")
-            return
-        }
-        
-        let activityVC = UIActivityViewController(
-            activityItems: [pdfURL],
-            applicationActivities: nil
-        )
-        
-        // For iPad - set popover presentation
-        if let popover = activityVC.popoverPresentationController {
-            // Find the root view controller to get the proper source view
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let window = windowScene.windows.first,
-               let rootViewController = window.rootViewController {
-                popover.sourceView = rootViewController.view
-                popover.sourceRect = CGRect(x: rootViewController.view.bounds.midX, y: rootViewController.view.bounds.midY, width: 0, height: 0)
-                popover.permittedArrowDirections = []
-            }
-        }
-        
-        // Present the share sheet
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first,
-           let rootViewController = window.rootViewController {
-            
-            // Find the topmost presented view controller
-            var topController = rootViewController
-            while let presentedViewController = topController.presentedViewController {
-                topController = presentedViewController
-            }
-            
-            topController.present(activityVC, animated: true, completion: nil)
+        case .denied, .restricted:
+            isCameraAuthorized = false
+            errorMessage = "Please enable camera access in Settings to use the math solver."
+        @unknown default:
+            isCameraAuthorized = false
+            errorMessage = "Unknown camera authorization status."
         }
     }
 }
 
+
+
+struct CameraView: UIViewControllerRepresentable {
+    @Binding var capturedImage: UIImage?
+    
+    class Coordinator: NSObject, AVCapturePhotoCaptureDelegate {
+        var parent: CameraView
+        var photoOutput: AVCapturePhotoOutput?
+        var previewLayer: AVCaptureVideoPreviewLayer?
+        var captureRect: CGRect?
+        
+        init(parent: CameraView) {
+            self.parent = parent
+            super.init()
+            
+            // Listen for capture photo notification
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(capturePhoto),
+                name: NSNotification.Name("CapturePhoto"),
+                object: nil
+            )
+        }
+        
+        deinit {
+            NotificationCenter.default.removeObserver(self)
+        }
+        
+        func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+            guard let imageData = photo.fileDataRepresentation(),
+                  let image = UIImage(data: imageData) else { return }
+
+            guard let previewLayer = self.previewLayer, let captureRect = self.captureRect else {
+                DispatchQueue.main.async {
+                    self.parent.capturedImage = image
+                }
+                return
+            }
+
+            let metadataOutputRect = previewLayer.metadataOutputRectConverted(fromLayerRect: captureRect)
+            let croppedImage = self.cropImage(image, to: metadataOutputRect)
+
+            DispatchQueue.main.async {
+                self.parent.capturedImage = croppedImage ?? image
+            }
+        }
+
+        private func cropImage(_ image: UIImage, to rect: CGRect) -> UIImage? {
+            guard let cgImage = image.cgImage else { return nil }
+
+            let imageWidth = CGFloat(cgImage.width)
+            let imageHeight = CGFloat(cgImage.height)
+
+            let cropRect = CGRect(
+                x: rect.origin.x * imageWidth,
+                y: rect.origin.y * imageHeight,
+                width: rect.size.width * imageWidth,
+                height: rect.size.height * imageHeight
+            )
+
+            if let croppedCGImage = cgImage.cropping(to: cropRect) {
+                return UIImage(cgImage: croppedCGImage, scale: image.scale, orientation: image.imageOrientation)
+            }
+
+            return nil
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+    
+    func makeUIViewController(context: Context) -> UIViewController {
+        let viewController = UIViewController()
+        let session = AVCaptureSession()
+        session.sessionPreset = .photo
+        
+        guard let device = AVCaptureDevice.default(for: .video),
+              let input = try? AVCaptureDeviceInput(device: device) else {
+            return viewController
+        }
+        
+        let output = AVCapturePhotoOutput()
+        context.coordinator.photoOutput = output
+        session.addInput(input)
+        session.addOutput(output)
+        session.startRunning()
+        
+        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
+        previewLayer.videoGravity = .resizeAspectFill
+        previewLayer.frame = viewController.view.bounds
+        context.coordinator.previewLayer = previewLayer
+        
+        viewController.view.layer.addSublayer(previewLayer)
+        
+        // Add rectangular overlay with fade effect
+        let overlayView = UIView(frame: viewController.view.bounds)
+        overlayView.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+        
+        // Define the rectangular capture area using device screen dimensions
+        let cornerRadius: CGFloat = 8.0
+        let screenBounds = UIScreen.main.bounds
+        let screenWidth = screenBounds.width
+        let screenHeight = screenBounds.height
+        
+        let rectWidth = screenWidth * 0.85  // 85% of screen width
+        let rectHeight: CGFloat = 120.0
+        
+        // Center horizontally on screen
+        let rectX = (screenWidth - rectWidth) / 2.0
+        
+        // Center vertically in the screen, then move up 50px
+        let rectY = (screenHeight - rectHeight) / 2.0 - 50.0
+        
+        let captureRect = CGRect(x: rectX, y: rectY, width: rectWidth, height: rectHeight)
+        context.coordinator.captureRect = captureRect
+        
+        let path = UIBezierPath(roundedRect: captureRect, cornerRadius: cornerRadius)
+        let maskLayer = CAShapeLayer()
+        let fullPath = UIBezierPath(rect: viewController.view.bounds)
+        fullPath.append(path)
+        maskLayer.path = fullPath.cgPath
+        maskLayer.fillRule = .evenOdd
+        overlayView.layer.mask = maskLayer
+        
+        viewController.view.addSubview(overlayView)
+        
+        // Add corner brackets for the cutout
+        let bracketLength: CGFloat = 20.0
+        let bracketWidth: CGFloat = 3.0
+        
+        // Top-left bracket
+        let topLeftBracket = CAShapeLayer()
+        let topLeftPath = UIBezierPath()
+        topLeftPath.move(to: CGPoint(x: rectX + bracketLength, y: rectY))
+        topLeftPath.addLine(to: CGPoint(x: rectX, y: rectY))
+        topLeftPath.addLine(to: CGPoint(x: rectX, y: rectY + bracketLength))
+        topLeftBracket.path = topLeftPath.cgPath
+        topLeftBracket.lineWidth = bracketWidth
+        topLeftBracket.strokeColor = UIColor.white.cgColor
+        topLeftBracket.fillColor = UIColor.clear.cgColor
+        viewController.view.layer.addSublayer(topLeftBracket)
+        
+        // Top-right bracket
+        let topRightBracket = CAShapeLayer()
+        let topRightPath = UIBezierPath()
+        topRightPath.move(to: CGPoint(x: rectX + rectWidth - bracketLength, y: rectY))
+        topRightPath.addLine(to: CGPoint(x: rectX + rectWidth, y: rectY))
+        topRightPath.addLine(to: CGPoint(x: rectX + rectWidth, y: rectY + bracketLength))
+        topRightBracket.path = topRightPath.cgPath
+        topRightBracket.lineWidth = bracketWidth
+        topRightBracket.strokeColor = UIColor.white.cgColor
+        topRightBracket.fillColor = UIColor.clear.cgColor
+        viewController.view.layer.addSublayer(topRightBracket)
+        
+        // Bottom-left bracket
+        let bottomLeftBracket = CAShapeLayer()
+        let bottomLeftPath = UIBezierPath()
+        bottomLeftPath.move(to: CGPoint(x: rectX, y: rectY + rectHeight - bracketLength))
+        bottomLeftPath.addLine(to: CGPoint(x: rectX, y: rectY + rectHeight))
+        bottomLeftPath.addLine(to: CGPoint(x: rectX + bracketLength, y: rectY + rectHeight))
+        bottomLeftBracket.path = bottomLeftPath.cgPath
+        bottomLeftBracket.lineWidth = bracketWidth
+        bottomLeftBracket.strokeColor = UIColor.white.cgColor
+        bottomLeftBracket.fillColor = UIColor.clear.cgColor
+        viewController.view.layer.addSublayer(bottomLeftBracket)
+        
+        // Bottom-right bracket
+        let bottomRightBracket = CAShapeLayer()
+        let bottomRightPath = UIBezierPath()
+        bottomRightPath.move(to: CGPoint(x: rectX + rectWidth - bracketLength, y: rectY + rectHeight))
+        bottomRightPath.addLine(to: CGPoint(x: rectX + rectWidth, y: rectY + rectHeight))
+        bottomRightPath.addLine(to: CGPoint(x: rectX + rectWidth, y: rectY + rectHeight - bracketLength))
+        bottomRightBracket.path = bottomRightPath.cgPath
+        bottomRightBracket.lineWidth = bracketWidth
+        bottomRightBracket.strokeColor = UIColor.white.cgColor
+        bottomRightBracket.fillColor = UIColor.clear.cgColor
+        viewController.view.layer.addSublayer(bottomRightBracket)
+        
+        // Note: Capture button is now handled by SwiftUI overlay
+        
+        return viewController
+    }
+    
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+}
+
+protocol CameraViewControllerDelegate: AnyObject {
+    func didCaptureImage(_ image: UIImage)
+    func didFailWithError(_ error: Error)
+}
+
+extension CameraView.Coordinator {
+    @objc func capturePhoto() {
+        let settings = AVCapturePhotoSettings()
+        photoOutput?.capturePhoto(with: settings, delegate: self)
+    }
+}
+
+
+class CameraViewController: UIViewController {
+    weak var delegate: CameraViewControllerDelegate?
+    private var captureSession: AVCaptureSession?
+    private var photoOutput: AVCapturePhotoOutput?
+    private var previewLayer: AVCaptureVideoPreviewLayer?
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupCamera()
+        NotificationCenter.default.addObserver(self, selector: #selector(capturePhoto), name: NSNotification.Name("CapturePhoto"), object: nil)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        captureSession?.stopRunning()
+        NotificationCenter.default.removeObserver(self, name: NSNotification.Name("CapturePhoto"), object: nil)
+    }
+
+    private func setupCamera() {
+        captureSession = AVCaptureSession()
+        captureSession?.sessionPreset = .photo
+
+        guard let captureDevice = AVCaptureDevice.default(for: .video),
+              let captureSession = captureSession else {
+            delegate?.didFailWithError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to set up camera"]))
+            return
+        }
+
+        do {
+            let input = try AVCaptureDeviceInput(device: captureDevice)
+            if captureSession.canAddInput(input) {
+                captureSession.addInput(input)
+            }
+
+            photoOutput = AVCapturePhotoOutput()
+            if captureSession.canAddOutput(photoOutput!) {
+                captureSession.addOutput(photoOutput!)
+            }
+
+            previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+            previewLayer?.videoGravity = .resizeAspectFill
+            previewLayer?.frame = view.bounds
+            if let previewLayer = previewLayer {
+                view.layer.addSublayer(previewLayer)
+            }
+
+            captureSession.startRunning()
+        } catch {
+            delegate?.didFailWithError(error)
+        }
+    }
+
+    @objc func capturePhoto() {
+        let settings = AVCapturePhotoSettings()
+        photoOutput?.capturePhoto(with: settings, delegate: self)
+    }
+}
+
+extension CameraViewController: AVCapturePhotoCaptureDelegate {
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        if let error = error {
+            delegate?.didFailWithError(error)
+            return
+        }
+        
+        guard let imageData = photo.fileDataRepresentation(),
+              let image = UIImage(data: imageData) else {
+            delegate?.didFailWithError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to process captured image"]))
+            return
+        }
+
+        delegate?.didCaptureImage(image)
+    }
+}
 
 extension UserDefaults {
     static func resetDefaults() {

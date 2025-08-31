@@ -86,6 +86,9 @@
         }
       }
     },
+    "Camera access is required to solve math problems" : {
+
+    },
     "Cancel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -96,6 +99,9 @@
           }
         }
       }
+    },
+    "Capture Photo" : {
+
     },
     "Cards" : {
 
@@ -202,9 +208,6 @@
     "Everything You Need" : {
 
     },
-    "Export" : {
-
-    },
     "Free limit: %lld photos per project" : {
 
     },
@@ -240,6 +243,9 @@
       }
     },
     "List" : {
+
+    },
+    "Math Solver" : {
 
     },
     "Microphone Access Needed" : {
@@ -457,9 +463,6 @@
     "Project Title" : {
 
     },
-    "Projects" : {
-
-    },
     "Recent Projects" : {
 
     },
@@ -501,6 +504,9 @@
       }
     },
     "Restore Purchases" : {
+
+    },
+    "Retake Photo" : {
 
     },
     "Save" : {
@@ -553,6 +559,9 @@
     "See All" : {
 
     },
+    "Select a photo of a math problem" : {
+
+    },
     "Select Language" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -563,6 +572,18 @@
           }
         }
       }
+    },
+    "Select Photo" : {
+
+    },
+    "Solve" : {
+
+    },
+    "Solve Math Problem" : {
+
+    },
+    "Solving..." : {
+
     },
     "Start for Free" : {
       "extractionState" : "manual",
