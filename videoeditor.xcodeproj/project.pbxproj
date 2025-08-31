@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A48819132E213B4100A4B7DC /* Mantis in Frameworks */ = {isa = PBXBuildFile; productRef = A48819122E213B4100A4B7DC /* Mantis */; };
 		A4C17C0D2E1AB6E20082C004 /* storekiteditor.storekit in Resources */ = {isa = PBXBuildFile; fileRef = A4C17C0C2E1AB6E20082C004 /* storekiteditor.storekit */; };
 /* End PBXBuildFile section */
 
@@ -58,7 +57,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A48819132E213B4100A4B7DC /* Mantis in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -120,7 +118,6 @@
 			);
 			name = videoeditor;
 			packageProductDependencies = (
-				A48819122E213B4100A4B7DC /* Mantis */,
 			);
 			productName = videoeditor;
 			productReference = A4EEA29B2E01918E00AEE850 /* videoeditor.app */;
@@ -205,7 +202,6 @@
 			mainGroup = A4EEA2922E01918E00AEE850;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				A48819112E213B4100A4B7DC /* XCRemoteSwiftPackageReference "Mantis" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A4EEA29C2E01918E00AEE850 /* Products */;
@@ -415,14 +411,13 @@
 				DEVELOPMENT_TEAM = CYL68JMKHB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = videoeditor/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Photos to PDF";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs access to your camera to import and edit videos.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to provide you with relevant information.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "This app needs permission to save edited videos to your photo library.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs access to your photo library to import ";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs access to your photo library to import";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -451,14 +446,13 @@
 				DEVELOPMENT_TEAM = CYL68JMKHB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = videoeditor/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Photos to PDF";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs access to your camera to import and edit videos.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to provide you with relevant information.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "This app needs permission to save edited videos to your photo library.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs access to your photo library to import ";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "This app needs access to your photo library to import";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -589,25 +583,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		A48819112E213B4100A4B7DC /* XCRemoteSwiftPackageReference "Mantis" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/guoyingtao/Mantis.git";
-			requirement = {
-				kind = exactVersion;
-				version = 2.26.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		A48819122E213B4100A4B7DC /* Mantis */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = A48819112E213B4100A4B7DC /* XCRemoteSwiftPackageReference "Mantis" */;
-			productName = Mantis;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A4EEA2932E01918E00AEE850 /* Project object */;
 }
