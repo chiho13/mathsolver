@@ -15,7 +15,7 @@ struct ResizableBracketsView: View {
     
     // Bracket styling
     private let bracketLength: CGFloat = 20.0
-    private let bracketWidth: CGFloat = 4.0
+    private let bracketWidth: CGFloat = 5.0
     private let handleSize: CGFloat = 80.0 // Larger touchable area
     
     @State private var activeCorner: CornerPosition?
@@ -30,9 +30,23 @@ struct ResizableBracketsView: View {
             
             // Thin white border around capture area with rounded corners
             RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.white, lineWidth: 1)
+                .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
                 .frame(width: captureRect.width, height: captureRect.height)
                 .position(x: captureRect.midX, y: captureRect.midY)
+            
+            // Center crosshair for aiming
+            Path { path in
+                let crosshairSize: CGFloat = 20
+                let center = CGPoint(x: captureRect.midX, y: captureRect.midY)
+                path.move(to: CGPoint(x: center.x - crosshairSize / 2, y: center.y))
+                path.addLine(to: CGPoint(x: center.x + crosshairSize / 2, y: center.y))
+                path.move(to: CGPoint(x: center.x, y: center.y - crosshairSize / 2))
+                path.addLine(to: CGPoint(x: center.x, y: center.y + crosshairSize / 2))
+            }
+            .stroke(Color.white, lineWidth: 1)
+            .opacity(activeCorner == nil ? 1 : 0)
+            .animation(.easeInOut(duration: 0.2), value: activeCorner)
+            
         }
         .contentShape(Rectangle())
         .gesture(
