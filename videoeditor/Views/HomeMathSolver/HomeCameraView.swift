@@ -16,6 +16,7 @@ import AVFoundation
 struct CameraView: UIViewControllerRepresentable {
     @Binding var capturedImage: UIImage?
     @Binding var captureRect: CGRect
+    @ObservedObject var viewModel: VisionViewModel
     
     class Coordinator: NSObject, AVCapturePhotoCaptureDelegate {
         var parent: CameraView
@@ -165,6 +166,108 @@ struct CameraView: UIViewControllerRepresentable {
             maskLayer.path = fullPath.cgPath
             maskLayer.fillRule = .evenOdd
             CATransaction.commit()
+            
+            // Animation is now handled in SwiftUI layer above this view
+        }
+    }
+    
+    private func addPulsingAnimation(to view: UIView) {
+        // Remove any existing animation first
+        removePulsingAnimation(from: view)
+        
+        // Create a container view that will be clipped by the mask
+        let animationContainer = UIView(frame: view.bounds)
+        animationContainer.backgroundColor = .clear
+        animationContainer.tag = 1001 // Tag to identify the animation container
+        
+        // Add the container to the view and bring it to front so it appears above everything
+        view.addSubview(animationContainer)
+        view.bringSubviewToFront(animationContainer)
+        
+        // Create 12 white pulsing dots at random positions within the capture rect
+        let dotSize: CGFloat = 6.0
+        let numberOfDots = 12
+        
+        // Calculate usable area (leave some margin from edges)
+        let margin: CGFloat = 20.0
+        let usableRect = CGRect(
+            x: captureRect.origin.x + margin,
+            y: captureRect.origin.y + margin,
+            width: captureRect.width - (margin * 2),
+            height: captureRect.height - (margin * 2)
+        )
+        
+        for i in 0..<numberOfDots {
+            // Generate random position within the usable area
+            let randomX = usableRect.origin.x + CGFloat.random(in: 0...usableRect.width - dotSize)
+            let randomY = usableRect.origin.y + CGFloat.random(in: 0...usableRect.height - dotSize)
+            
+            // Create white dot
+            let dot = UIView(frame: CGRect(x: randomX, y: randomY, width: dotSize, height: dotSize))
+            dot.backgroundColor = UIColor.white
+            dot.layer.cornerRadius = dotSize / 2
+            dot.tag = 1000 + i // Tag to identify dots (1000-1011)
+            
+            // Add subtle shadow for better visibility
+            dot.layer.shadowColor = UIColor.white.cgColor
+            dot.layer.shadowOffset = CGSize(width: 0, height: 0)
+            dot.layer.shadowRadius = 3.0
+            dot.layer.shadowOpacity = 0.8
+            
+            animationContainer.addSubview(dot)
+            
+            // Create random pulsing animation for each dot
+            let pulseAnimation = CABasicAnimation(keyPath: "opacity")
+            pulseAnimation.fromValue = 1.0
+            pulseAnimation.toValue = 0.2
+            
+            // Random duration between 0.8 and 2.0 seconds
+            let randomDuration = Double.random(in: 0.8...2.0)
+            pulseAnimation.duration = randomDuration
+            
+            // Random delay to stagger the animations
+            let randomDelay = Double.random(in: 0...1.0)
+            pulseAnimation.beginTime = CACurrentMediaTime() + randomDelay
+            
+            pulseAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            pulseAnimation.autoreverses = true
+            pulseAnimation.repeatCount = .infinity
+            
+            // Add scale animation for more dynamic effect
+            let scaleAnimation = CABasicAnimation(keyPath: "transform.scale")
+            scaleAnimation.fromValue = 1.0
+            scaleAnimation.toValue = 1.5
+            scaleAnimation.duration = randomDuration
+            scaleAnimation.beginTime = CACurrentMediaTime() + randomDelay
+            scaleAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            scaleAnimation.autoreverses = true
+            scaleAnimation.repeatCount = .infinity
+            
+            // Group the animations
+            let animationGroup = CAAnimationGroup()
+            animationGroup.animations = [pulseAnimation, scaleAnimation]
+            animationGroup.duration = randomDuration
+            animationGroup.beginTime = CACurrentMediaTime() + randomDelay
+            animationGroup.repeatCount = .infinity
+            
+            dot.layer.add(animationGroup, forKey: "pulsingDot\(i)")
+        }
+        
+        print("Added \(numberOfDots) pulsing dots in capture area")
+    }
+    
+    private func removePulsingAnimation(from view: UIView) {
+        // Remove the animation container which contains all animation elements
+        if let animationContainer = view.subviews.first(where: { $0.tag == 1001 }) {
+            print("Removing animation container with dots")
+            animationContainer.removeFromSuperview()
+        }
+        
+        // Fallback: remove individual dots if container doesn't exist
+        for tag in 1000...1011 {
+            if let dot = view.subviews.first(where: { $0.tag == tag }) {
+                dot.removeFromSuperview()
+            }
         }
     }
 }

@@ -31,6 +31,9 @@ class VisionViewModel: ObservableObject {
     /// A boolean to control the visibility of the image picker.
     @Published var isShowingImagePicker: Bool = false
     
+    /// A boolean to control cropped area animation while solving
+    @Published var isAnimatingCroppedArea: Bool = false
+    
     // MARK: - Private Properties
     
     private let visionService = VisionService()
@@ -67,6 +70,33 @@ class VisionViewModel: ObservableObject {
         isLoading = false
     }
     
+    /// Performs math problem solving with automatic detection
+    @MainActor
+    func solveMathProblem() async {
+        guard let image = selectedImage else {
+            errorMessage = "Please select an image first."
+            return
+        }
+        
+        // Reset state for a new request
+        isLoading = true
+        isAnimatingCroppedArea = true
+        errorMessage = nil
+        visionResponse = ""
+        
+        do {
+            let response = try await visionService.solveMathProblem(image: image)
+            self.visionResponse = response
+        } catch let error as VisionError {
+            self.errorMessage = self.handleVisionError(error)
+        } catch {
+            self.errorMessage = "An unexpected error occurred: \(error.localizedDescription)"
+        }
+        
+        isLoading = false
+        isAnimatingCroppedArea = false
+    }
+    
     // MARK: - Private Methods
     
     /// Handles the VisionError and returns a user-friendly message.
@@ -88,6 +118,10 @@ class VisionViewModel: ObservableObject {
             return "The selected image is too large. Please choose a smaller one."
         case .jsonEncodingError(let jsonError):
             return "Failed to encode request data: \(jsonError.localizedDescription)"
+        case .noMathFound:
+            return "📷 No math problems detected in this image. Please try taking a photo that contains mathematical equations, formulas, or problems to solve."
+        case .imageContentNotSuitable:
+            return "🔍 This image doesn't appear to contain mathematical content suitable for solving. Please capture an image with clear math problems."
         }
     }
 }

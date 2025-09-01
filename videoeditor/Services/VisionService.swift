@@ -16,6 +16,8 @@ enum VisionError: Error {
     case promptTooLong
     case imageTooLarge
     case jsonEncodingError(Error)
+    case noMathFound
+    case imageContentNotSuitable
 }
 
 struct GroqVisionRequest: Codable {
@@ -35,6 +37,25 @@ struct GroqVisionErrorResponse: Codable {
 class VisionService: ObservableObject {
     // Assuming the same base URL as SearchAPIService
     private let baseURL = "https://render-proxy-psbm.onrender.com"
+    
+    func detectMathContent(image: UIImage) async throws -> Bool {
+        let detectionPrompt = "Look at this image and determine if it contains mathematical problems, equations, formulas, or mathematical content that can be solved. Respond with ONLY 'YES' if it contains solvable math content, or 'NO' if it doesn't contain any mathematical problems to solve."
+        
+        let response = try await performVisionRequest(prompt: detectionPrompt, image: image)
+        return response.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "YES"
+    }
+    
+    func solveMathProblem(image: UIImage) async throws -> String {
+        // First check if the image contains math content
+        let containsMath = try await detectMathContent(image: image)
+        
+        if !containsMath {
+            throw VisionError.noMathFound
+        }
+        
+        let mathPrompt = "Solve the mathematical problem(s) shown in this image. Provide a clear step-by-step solution with the final answer. If there are multiple problems, solve them all."
+        return try await performVisionRequest(prompt: mathPrompt, image: image)
+    }
 
     func performVisionRequest(prompt: String, image: UIImage) async throws -> String {
         if prompt.count > 4000 {

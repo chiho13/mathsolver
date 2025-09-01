@@ -41,7 +41,7 @@ struct ContentView: View {
                                 .cornerRadius(10)
                                 .padding()
                         } else {
-                            CameraWithBracketsView(capturedImage: $capturedImage)
+                            CameraWithBracketsView(capturedImage: $capturedImage, viewModel: viewModel)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .ignoresSafeArea(.all)
                         }
@@ -81,9 +81,45 @@ struct ContentView: View {
                     }
 
                     if let errorMessage = viewModel.errorMessage ?? errorMessage {
-                        Text(errorMessage)
-                            .foregroundColor(.red)
-                            .padding()
+                        VStack(spacing: 12) {
+                            Text(errorMessage)
+                                .foregroundColor(.red)
+                                .padding()
+                            
+                            // Show helpful tips for no math content errors
+                            if errorMessage.contains("No math problems detected") || errorMessage.contains("doesn't appear to contain mathematical content") {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("📝 Tips for better results:")
+                                        .font(.headline)
+                                        .foregroundColor(.blue)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        HStack(alignment: .top) {
+                                            Text("•")
+                                            Text("Make sure the image contains clear mathematical equations, formulas, or word problems")
+                                        }
+                                        HStack(alignment: .top) {
+                                            Text("•")
+                                            Text("Ensure text is readable and not blurry")
+                                        }
+                                        HStack(alignment: .top) {
+                                            Text("•")
+                                            Text("Include the full problem, not just parts of it")
+                                        }
+                                        HStack(alignment: .top) {
+                                            Text("•")
+                                            Text("Good lighting helps with text recognition")
+                                        }
+                                    }
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.secondary)
+                                }
+                                .padding()
+                                .background(Color.blue.opacity(0.1))
+                                .cornerRadius(10)
+                                .padding(.horizontal)
+                            }
+                        }
                     }
 
                     Spacer()
@@ -208,7 +244,31 @@ struct ContentView: View {
                                             }
                                             .buttonStyle(PlainButtonStyle())
                                         }
-                                        .padding(.bottom, 50) // Add bottom padding for safe area
+                                        .padding(.bottom, 20) // Add bottom padding for safe area
+                                        
+                                        // Test animation button (only show when camera is active)
+                                        Button(action: {
+                                            if viewModel.isAnimatingCroppedArea {
+                                                viewModel.isAnimatingCroppedArea = false
+                                            } else {
+                                                viewModel.isAnimatingCroppedArea = true
+                                                // Auto-stop after 3 seconds for demo
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+                                                    viewModel.isAnimatingCroppedArea = false
+                                                }
+                                            }
+                                        }) {
+                                            Text(viewModel.isAnimatingCroppedArea ? "Stop Animation" : "Test Animation")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 16)
+                                                .padding(.vertical, 8)
+                                                .background(
+                                                    Capsule()
+                                                        .fill(viewModel.isAnimatingCroppedArea ? Color.red.opacity(0.8) : Color.blue.opacity(0.8))
+                                                )
+                                        }
+                                        .padding(.bottom, 30)
                                     }
                                 }
                 
@@ -220,8 +280,7 @@ struct ContentView: View {
                             Button(action: {
                                 Task {
                                     viewModel.selectedImage = image
-                                    viewModel.prompt = mathPrompt
-                                    await viewModel.performVisionRequest()
+                                    await viewModel.solveMathProblem()
                                 }
                             }) {
                                 if viewModel.isLoading {
@@ -330,6 +389,7 @@ struct ContentView: View {
                         }
                         .padding(.top, 8)
                         .padding(.bottom, 8)
+                        .padding(.trailing, 8)
                         .opacity(showPremiumView ? 0 : 1)
                     }
                 }

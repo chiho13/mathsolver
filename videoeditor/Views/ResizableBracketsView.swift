@@ -10,11 +10,15 @@ import SwiftUI
 struct ResizableBracketsView: View {
     @Binding var captureRect: CGRect
     let screenBounds: CGRect
+    let isResizingDisabled: Bool
+    let initialWidth: CGFloat
     
     // Bracket styling
     private let bracketLength: CGFloat = 20.0
     private let bracketWidth: CGFloat = 4.0
     private let handleSize: CGFloat = 80.0 // Larger touchable area
+    
+    @State private var activeCorner: CornerPosition?
     
     var body: some View {
         ZStack {
@@ -29,13 +33,43 @@ struct ResizableBracketsView: View {
                 .stroke(Color.white, lineWidth: 1)
                 .frame(width: captureRect.width, height: captureRect.height)
                 .position(x: captureRect.midX, y: captureRect.midY)
-            
-            // Corner handles for dragging (invisible but touchable)
-            cornerHandle(at: .topLeft)
-            cornerHandle(at: .topRight)
-            cornerHandle(at: .bottomLeft)
-            cornerHandle(at: .bottomRight)
         }
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    if activeCorner == nil {
+                        activeCorner = corner(for: value.startLocation)
+                    }
+                    
+                    if let activeCorner = activeCorner {
+                        updateCaptureRect(for: activeCorner, dragValue: value)
+                    }
+                }
+                .onEnded { _ in
+                    activeCorner = nil
+                }
+        )
+        .disabled(isResizingDisabled)
+    }
+    
+    private func corner(for location: CGPoint) -> CornerPosition? {
+        let allCorners: [CornerPosition] = [.topLeft, .topRight, .bottomLeft, .bottomRight]
+        
+        for corner in allCorners {
+            let handlePosition = getCornerPosition(corner)
+            let handleRect = CGRect(
+                x: handlePosition.x - handleSize / 2,
+                y: handlePosition.y - handleSize / 2,
+                width: handleSize,
+                height: handleSize
+            )
+            if handleRect.contains(location) {
+                return corner
+            }
+        }
+        
+        return nil
     }
     
     private func styledBracket(at corner: CornerPosition) -> some View {
@@ -45,22 +79,6 @@ struct ResizableBracketsView: View {
             .stroke(Color.white, style: StrokeStyle(lineWidth: bracketWidth, lineCap: .round, lineJoin: .round))
             .frame(width: bracketLength * 2, height: bracketLength * 2)
             .position(position)
-    }
-    
-    private func cornerHandle(at corner: CornerPosition) -> some View {
-        let position = getCornerPosition(corner)
-        
-        return Rectangle()
-            .fill(Color.clear)
-            .frame(width: handleSize, height: handleSize)
-            .position(position)
-            .contentShape(Rectangle()) // Ensures the entire rectangle area is touchable
-            .gesture(
-                DragGesture()
-                    .onChanged { value in
-                        updateCaptureRect(for: corner, dragValue: value)
-                    }
-            )
     }
     
     private func getCornerPosition(_ corner: CornerPosition) -> CGPoint {
@@ -87,7 +105,7 @@ struct ResizableBracketsView: View {
         let bottomMargin: CGFloat = 250.0  // 250pt from bottom of device
         let sideMargin: CGFloat = 20.0     // Side padding
         
-        // Calculate maximum available height
+        // Calculate maximum available height and width
         let maxAvailableHeight = screenBounds.height - topMargin - bottomMargin
         
         // Calculate the delta from the center for mirrored movement
@@ -98,9 +116,10 @@ struct ResizableBracketsView: View {
         let constrainedDeltaX = max(deltaX, minWidth / 2)
         let constrainedDeltaY = max(deltaY, minHeight / 2)
         
-        // Apply maximum height constraint
+        // Apply maximum constraints - use initial width as max width
+        let maxDeltaX = initialWidth / 2
         let maxDeltaY = maxAvailableHeight / 2
-        let finalDeltaX = constrainedDeltaX
+        let finalDeltaX = min(constrainedDeltaX, maxDeltaX)
         let finalDeltaY = min(constrainedDeltaY, maxDeltaY)
         
         // Create new rect centered at the same point but with mirrored dimensions
@@ -115,7 +134,7 @@ struct ResizableBracketsView: View {
         let constrainedRect = CGRect(
             x: max(sideMargin, min(newRect.minX, screenBounds.width - newRect.width - sideMargin)),
             y: max(topMargin, min(newRect.minY, screenBounds.height - bottomMargin - newRect.height)),
-            width: min(newRect.width, screenBounds.width - 2 * sideMargin),
+            width: min(newRect.width, initialWidth),
             height: min(newRect.height, maxAvailableHeight)
         )
         

@@ -48,11 +48,9 @@ struct MathSolverView: View {
 
                 if viewModel.selectedImage != nil {
                     Button(action: {
-                        // Assuming your viewModel has a `solveMathProblem` method
-                        
                         Task {
-                               await viewModel.performVisionRequest()
-                           }
+                            await viewModel.solveMathProblem()
+                        }
                     }) {
                         if viewModel.isLoading {
                             ProgressView()
@@ -84,9 +82,45 @@ struct MathSolverView: View {
                 }
 
                 if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(.red)
-                        .padding()
+                    VStack(spacing: 12) {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .padding()
+                        
+                        // Show helpful tips for no math content errors
+                        if errorMessage.contains("No math problems detected") || errorMessage.contains("doesn't appear to contain mathematical content") {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("📝 Tips for better results:")
+                                    .font(.headline)
+                                    .foregroundColor(.blue)
+                                
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(alignment: .top) {
+                                        Text("•")
+                                        Text("Make sure the image contains clear mathematical equations, formulas, or word problems")
+                                    }
+                                    HStack(alignment: .top) {
+                                        Text("•")
+                                        Text("Ensure text is readable and not blurry")
+                                    }
+                                    HStack(alignment: .top) {
+                                        Text("•")
+                                        Text("Include the full problem, not just parts of it")
+                                    }
+                                    HStack(alignment: .top) {
+                                        Text("•")
+                                        Text("Good lighting helps with text recognition")
+                                    }
+                                }
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                            }
+                            .padding()
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(10)
+                            .padding(.horizontal)
+                        }
+                    }
                 }
 
                 Spacer()

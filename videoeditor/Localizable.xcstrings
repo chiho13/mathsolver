@@ -13,6 +13,9 @@
     "•" : {
 
     },
+    "📝 Tips for better results:" : {
+
+    },
     "7 Days FREE" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -143,6 +146,9 @@
         }
       }
     },
+    "Ensure text is readable and not blurry" : {
+
+    },
     "Error" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -171,6 +177,12 @@
         }
       }
     },
+    "Good lighting helps with text recognition" : {
+
+    },
+    "Include the full problem, not just parts of it" : {
+
+    },
     "Join thousands of users who create professional PDFs every day" : {
 
     },
@@ -184,6 +196,9 @@
           }
         }
       }
+    },
+    "Make sure the image contains clear mathematical equations, formulas, or word problems" : {
+
     },
     "Math Solver" : {
 
@@ -494,6 +509,9 @@
     "Start Now" : {
 
     },
+    "Stop Animation" : {
+
+    },
     "Success" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -521,6 +539,9 @@
           }
         }
       }
+    },
+    "Test Animation" : {
+
     },
     "The Local Finder" : {
       "extractionState" : "manual",
