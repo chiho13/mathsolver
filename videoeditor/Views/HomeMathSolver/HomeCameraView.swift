@@ -15,12 +15,12 @@ import AVFoundation
 
 struct CameraView: UIViewControllerRepresentable {
     @Binding var capturedImage: UIImage?
+    @Binding var captureRect: CGRect
     
     class Coordinator: NSObject, AVCapturePhotoCaptureDelegate {
         var parent: CameraView
         var photoOutput: AVCapturePhotoOutput?
         var previewLayer: AVCaptureVideoPreviewLayer?
-        var captureRect: CGRect?
         var captureDevice: AVCaptureDevice?
         
         init(parent: CameraView) {
@@ -52,14 +52,15 @@ struct CameraView: UIViewControllerRepresentable {
             guard let imageData = photo.fileDataRepresentation(),
                   let image = UIImage(data: imageData) else { return }
 
-            guard let previewLayer = self.previewLayer, let captureRect = self.captureRect else {
-                DispatchQueue.main.async {
-                    self.parent.capturedImage = image
-                }
-                return
+                    guard let previewLayer = self.previewLayer else {
+            DispatchQueue.main.async {
+                self.parent.capturedImage = image
             }
+            return
+        }
 
-            let metadataOutputRect = previewLayer.metadataOutputRectConverted(fromLayerRect: captureRect)
+        let captureRect = self.parent.captureRect
+        let metadataOutputRect = previewLayer.metadataOutputRectConverted(fromLayerRect: captureRect)
             let croppedImage = self.cropImage(image, to: metadataOutputRect)
 
             DispatchQueue.main.async {
@@ -121,24 +122,8 @@ struct CameraView: UIViewControllerRepresentable {
         let overlayView = UIView(frame: viewController.view.bounds)
         overlayView.backgroundColor = UIColor.black.withAlphaComponent(0.6)
         
-        // Define the rectangular capture area using device screen dimensions
+        // Create mask for the capture area (will be updated dynamically)
         let cornerRadius: CGFloat = 8.0
-        let screenBounds = UIScreen.main.bounds
-        let screenWidth = screenBounds.width
-        let screenHeight = screenBounds.height
-        
-        let rectWidth = screenWidth * 0.85  // 85% of screen width
-        let rectHeight: CGFloat = 120.0
-        
-        // Center horizontally on screen
-        let rectX = (screenWidth - rectWidth) / 2.0
-        
-        // Center vertically in the screen, then move up 50px
-        let rectY = (screenHeight - rectHeight) / 2.0 - 40.0
-        
-        let captureRect = CGRect(x: rectX, y: rectY, width: rectWidth, height: rectHeight)
-        context.coordinator.captureRect = captureRect
-        
         let path = UIBezierPath(roundedRect: captureRect, cornerRadius: cornerRadius)
         let maskLayer = CAShapeLayer()
         let fullPath = UIBezierPath(rect: viewController.view.bounds)
@@ -149,89 +134,39 @@ struct CameraView: UIViewControllerRepresentable {
         
         viewController.view.addSubview(overlayView)
         
-        // Add corner brackets for the cutout
-        let bracketLength: CGFloat = 20.0
-        let bracketWidth: CGFloat = 4.0
-        let bracketCornerRadius: CGFloat = 8.0
-        
-        // Top-left bracket
-        let topLeftBracket = CAShapeLayer()
-        let topLeftPath = UIBezierPath()
-        topLeftPath.move(to: CGPoint(x: rectX + bracketLength, y: rectY))
-        topLeftPath.addLine(to: CGPoint(x: rectX + bracketCornerRadius, y: rectY))
-        topLeftPath.addQuadCurve(to: CGPoint(x: rectX, y: rectY + bracketCornerRadius), 
-                                controlPoint: CGPoint(x: rectX, y: rectY))
-        topLeftPath.addLine(to: CGPoint(x: rectX, y: rectY + bracketLength))
-        topLeftPath.lineCapStyle = .round
-        topLeftPath.lineJoinStyle = .round
-        topLeftBracket.path = topLeftPath.cgPath
-        topLeftBracket.lineWidth = bracketWidth
-        topLeftBracket.strokeColor = UIColor.white.cgColor
-        topLeftBracket.fillColor = UIColor.clear.cgColor
-        topLeftBracket.lineCap = .round
-        topLeftBracket.lineJoin = .round
-        viewController.view.layer.addSublayer(topLeftBracket)
-        
-        // Top-right bracket
-        let topRightBracket = CAShapeLayer()
-        let topRightPath = UIBezierPath()
-        topRightPath.move(to: CGPoint(x: rectX + rectWidth - bracketLength, y: rectY))
-        topRightPath.addLine(to: CGPoint(x: rectX + rectWidth - bracketCornerRadius, y: rectY))
-        topRightPath.addQuadCurve(to: CGPoint(x: rectX + rectWidth, y: rectY + bracketCornerRadius),
-                                 controlPoint: CGPoint(x: rectX + rectWidth, y: rectY))
-        topRightPath.addLine(to: CGPoint(x: rectX + rectWidth, y: rectY + bracketLength))
-        topRightPath.lineCapStyle = .round
-        topRightPath.lineJoinStyle = .round
-        topRightBracket.path = topRightPath.cgPath
-        topRightBracket.lineWidth = bracketWidth
-        topRightBracket.strokeColor = UIColor.white.cgColor
-        topRightBracket.fillColor = UIColor.clear.cgColor
-        topRightBracket.lineCap = .round
-        topRightBracket.lineJoin = .round
-        viewController.view.layer.addSublayer(topRightBracket)
-        
-        // Bottom-left bracket
-        let bottomLeftBracket = CAShapeLayer()
-        let bottomLeftPath = UIBezierPath()
-        bottomLeftPath.move(to: CGPoint(x: rectX, y: rectY + rectHeight - bracketLength))
-        bottomLeftPath.addLine(to: CGPoint(x: rectX, y: rectY + rectHeight - bracketCornerRadius))
-        bottomLeftPath.addQuadCurve(to: CGPoint(x: rectX + bracketCornerRadius, y: rectY + rectHeight),
-                                   controlPoint: CGPoint(x: rectX, y: rectY + rectHeight))
-        bottomLeftPath.addLine(to: CGPoint(x: rectX + bracketLength, y: rectY + rectHeight))
-        bottomLeftPath.lineCapStyle = .round
-        bottomLeftPath.lineJoinStyle = .round
-        bottomLeftBracket.path = bottomLeftPath.cgPath
-        bottomLeftBracket.lineWidth = bracketWidth
-        bottomLeftBracket.strokeColor = UIColor.white.cgColor
-        bottomLeftBracket.fillColor = UIColor.clear.cgColor
-        bottomLeftBracket.lineCap = .round
-        bottomLeftBracket.lineJoin = .round
-        viewController.view.layer.addSublayer(bottomLeftBracket)
-        
-        // Bottom-right bracket
-        let bottomRightBracket = CAShapeLayer()
-        let bottomRightPath = UIBezierPath()
-        bottomRightPath.move(to: CGPoint(x: rectX + rectWidth - bracketLength, y: rectY + rectHeight))
-        bottomRightPath.addLine(to: CGPoint(x: rectX + rectWidth - bracketCornerRadius, y: rectY + rectHeight))
-        bottomRightPath.addQuadCurve(to: CGPoint(x: rectX + rectWidth, y: rectY + rectHeight - bracketCornerRadius),
-                                    controlPoint: CGPoint(x: rectX + rectWidth, y: rectY + rectHeight))
-        bottomRightPath.addLine(to: CGPoint(x: rectX + rectWidth, y: rectY + rectHeight - bracketLength))
-        bottomRightPath.lineCapStyle = .round
-        bottomRightPath.lineJoinStyle = .round
-        bottomRightBracket.path = bottomRightPath.cgPath
-        bottomRightBracket.lineWidth = bracketWidth
-        bottomRightBracket.strokeColor = UIColor.white.cgColor
-        bottomRightBracket.fillColor = UIColor.clear.cgColor
-        bottomRightBracket.lineCap = .round
-        bottomRightBracket.lineJoin = .round
-        viewController.view.layer.addSublayer(bottomRightBracket)
+        // Store reference to overlay and mask for dynamic updates
+        overlayView.tag = 999 // Tag to identify this view for updates
+        maskLayer.name = "captureMask"
         
         // Note: Capture button is now handled by SwiftUI overlay
         
         return viewController
     }
     
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        // Update the overlay mask when captureRect changes
+        if let overlayView = uiViewController.view.subviews.first(where: { $0.tag == 999 }),
+           let maskLayer = overlayView.layer.mask as? CAShapeLayer {
+            
+            // Use the overlay view bounds to ensure proper masking
+            let overlayBounds = overlayView.bounds
+            let cornerRadius: CGFloat = 8.0
+            
+            // Create the cutout path - this creates the clear window
+            let cutoutPath = UIBezierPath(roundedRect: captureRect, cornerRadius: cornerRadius)
+            
+            // Create the full overlay path
+            let fullPath = UIBezierPath(rect: overlayBounds)
+            fullPath.append(cutoutPath)
+            
+            // Use even-odd fill rule to create the cutout effect
+            CATransaction.begin()
+            CATransaction.setDisableActions(true) // Disable implicit animations to prevent layout issues
+            maskLayer.path = fullPath.cgPath
+            maskLayer.fillRule = .evenOdd
+            CATransaction.commit()
+        }
+    }
 }
 
 protocol CameraViewControllerDelegate: AnyObject {

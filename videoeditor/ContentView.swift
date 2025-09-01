@@ -41,7 +41,7 @@ struct ContentView: View {
                                 .cornerRadius(10)
                                 .padding()
                         } else {
-                            CameraView(capturedImage: $capturedImage)
+                            CameraWithBracketsView(capturedImage: $capturedImage)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .ignoresSafeArea(.all)
                         }
@@ -62,43 +62,7 @@ struct ContentView: View {
 
                    
 
-                    if let image = capturedImage {
-                        Button(action: {
-                            Task {
-                                viewModel.selectedImage = image
-                                viewModel.prompt = mathPrompt
-                                await viewModel.performVisionRequest()
-                            }
-                        }) {
-                            if viewModel.isLoading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .frame(height: 20)
-                            } else {
-                                Text("Solve Math Problem")
-                                    .font(.headline)
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(viewModel.isLoading)
-                        .padding(.horizontal)
 
-                        // Button to retake photo
-                        Button(action: {
-                            capturedImage = nil
-                            viewModel.visionResponse = ""
-                            viewModel.errorMessage = nil
-                        }) {
-                            Text("Retake Photo")
-                                .font(.headline)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .padding(.horizontal)
-                    }
 
                     if viewModel.isLoading {
                         ProgressView("Solving...")
@@ -160,7 +124,7 @@ struct ContentView: View {
                                         startPoint: .top,
                                         endPoint: .bottom
                                     )
-                                    .frame(height: 300)
+                                    .frame(height: 250)
                                 }
                                 .ignoresSafeArea(.all)
 
@@ -247,6 +211,51 @@ struct ContentView: View {
                                         .padding(.bottom, 50) // Add bottom padding for safe area
                                     }
                                 }
+                
+                // Buttons overlay - always on top of gradient
+                if let image = capturedImage {
+                    VStack {
+                        Spacer()
+                        VStack(spacing: 16) {
+                            Button(action: {
+                                Task {
+                                    viewModel.selectedImage = image
+                                    viewModel.prompt = mathPrompt
+                                    await viewModel.performVisionRequest()
+                                }
+                            }) {
+                                if viewModel.isLoading {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                        .frame(height: 20)
+                                } else {
+                                    Text("Solve Math Problem")
+                                        .font(.headline)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(viewModel.isLoading)
+                            
+                            // Button to retake photo
+                            Button(action: {
+                                capturedImage = nil
+                                viewModel.visionResponse = ""
+                                viewModel.errorMessage = nil
+                            }) {
+                                Text("Retake Photo")
+                                    .font(.headline)
+                                    .padding()
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 50) // Safe area padding
+                    }
+                    .ignoresSafeArea(.all)
+                }
             }
             .onAppear {
                 checkCameraAuthorization()
