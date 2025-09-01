@@ -30,7 +30,7 @@ struct ResizableBracketsView: View {
             
             // Thin white border around capture area with rounded corners
             RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
+                .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
                 .frame(width: captureRect.width, height: captureRect.height)
                 .position(x: captureRect.midX, y: captureRect.midY)
             

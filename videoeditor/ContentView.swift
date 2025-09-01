@@ -176,7 +176,7 @@ struct ContentView: View {
                                             .padding(.vertical, 4)
                                             .background(
                                                 Capsule()
-                                                    .fill(Color.black.opacity(0.8))
+                                                    .fill(Color.fromHex("#222222").opacity(0.8))
                                             )
                                             .padding(.bottom, 24)
                                         
