@@ -18,53 +18,14 @@ struct ResizableBracketsView: View {
     
     var body: some View {
         ZStack {
-            // Simple white rectangles for brackets - just to test visibility
-            // Top-left bracket
-            Rectangle()
-                .fill(Color.white)
-                .frame(width: bracketLength, height: bracketWidth)
-                .position(x: captureRect.minX + bracketLength/2, y: captureRect.minY)
+            // Styled corner brackets with rounded corners and line caps
+            styledBracket(at: .topLeft)
+            styledBracket(at: .topRight)
+            styledBracket(at: .bottomLeft)
+            styledBracket(at: .bottomRight)
             
-            Rectangle()
-                .fill(Color.white)
-                .frame(width: bracketWidth, height: bracketLength)
-                .position(x: captureRect.minX, y: captureRect.minY + bracketLength/2)
-            
-            // Top-right bracket
-            Rectangle()
-                .fill(Color.white)
-                .frame(width: bracketLength, height: bracketWidth)
-                .position(x: captureRect.maxX - bracketLength/2, y: captureRect.minY)
-            
-            Rectangle()
-                .fill(Color.white)
-                .frame(width: bracketWidth, height: bracketLength)
-                .position(x: captureRect.maxX, y: captureRect.minY + bracketLength/2)
-            
-            // Bottom-left bracket
-            Rectangle()
-                .fill(Color.white)
-                .frame(width: bracketLength, height: bracketWidth)
-                .position(x: captureRect.minX + bracketLength/2, y: captureRect.maxY)
-            
-            Rectangle()
-                .fill(Color.white)
-                .frame(width: bracketWidth, height: bracketLength)
-                .position(x: captureRect.minX, y: captureRect.maxY - bracketLength/2)
-            
-            // Bottom-right bracket
-            Rectangle()
-                .fill(Color.white)
-                .frame(width: bracketLength, height: bracketWidth)
-                .position(x: captureRect.maxX - bracketLength/2, y: captureRect.maxY)
-            
-            Rectangle()
-                .fill(Color.white)
-                .frame(width: bracketWidth, height: bracketLength)
-                .position(x: captureRect.maxX, y: captureRect.maxY - bracketLength/2)
-            
-            // Thin white border around capture area
-            Rectangle()
+            // Thin white border around capture area with rounded corners
+            RoundedRectangle(cornerRadius: 8)
                 .stroke(Color.white, lineWidth: 1)
                 .frame(width: captureRect.width, height: captureRect.height)
                 .position(x: captureRect.midX, y: captureRect.midY)
@@ -77,13 +38,23 @@ struct ResizableBracketsView: View {
         }
     }
     
+    private func styledBracket(at corner: CornerPosition) -> some View {
+        let position = getCornerPosition(corner)
+        
+        return BracketShape(corner: corner, length: bracketLength, cornerRadius: 8.0)
+            .stroke(Color.white, style: StrokeStyle(lineWidth: bracketWidth, lineCap: .round, lineJoin: .round))
+            .frame(width: bracketLength * 2, height: bracketLength * 2)
+            .position(position)
+    }
+    
     private func cornerHandle(at corner: CornerPosition) -> some View {
         let position = getCornerPosition(corner)
         
-        return Circle()
-            .fill(Color.clear) // Completely invisible but still touchable
+        return Rectangle()
+            .fill(Color.clear)
             .frame(width: handleSize, height: handleSize)
             .position(position)
+            .contentShape(Rectangle()) // Ensures the entire rectangle area is touchable
             .gesture(
                 DragGesture()
                     .onChanged { value in
@@ -154,6 +125,65 @@ struct ResizableBracketsView: View {
 
 enum CornerPosition {
     case topLeft, topRight, bottomLeft, bottomRight
+}
+
+struct BracketShape: Shape {
+    let corner: CornerPosition
+    let length: CGFloat
+    let cornerRadius: CGFloat
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        
+        switch corner {
+        case .topLeft:
+            // Horizontal line extending right from corner
+            path.move(to: CGPoint(x: center.x + length, y: center.y))
+            path.addLine(to: CGPoint(x: center.x + cornerRadius, y: center.y))
+            path.addQuadCurve(
+                to: CGPoint(x: center.x, y: center.y + cornerRadius),
+                control: CGPoint(x: center.x, y: center.y)
+            )
+            // Vertical line extending down from corner
+            path.addLine(to: CGPoint(x: center.x, y: center.y + length))
+            
+        case .topRight:
+            // Horizontal line extending left from corner
+            path.move(to: CGPoint(x: center.x - length, y: center.y))
+            path.addLine(to: CGPoint(x: center.x - cornerRadius, y: center.y))
+            path.addQuadCurve(
+                to: CGPoint(x: center.x, y: center.y + cornerRadius),
+                control: CGPoint(x: center.x, y: center.y)
+            )
+            // Vertical line extending down from corner
+            path.addLine(to: CGPoint(x: center.x, y: center.y + length))
+            
+        case .bottomLeft:
+            // Vertical line extending up from corner
+            path.move(to: CGPoint(x: center.x, y: center.y - length))
+            path.addLine(to: CGPoint(x: center.x, y: center.y - cornerRadius))
+            path.addQuadCurve(
+                to: CGPoint(x: center.x + cornerRadius, y: center.y),
+                control: CGPoint(x: center.x, y: center.y)
+            )
+            // Horizontal line extending right from corner
+            path.addLine(to: CGPoint(x: center.x + length, y: center.y))
+            
+        case .bottomRight:
+            // Vertical line extending up from corner
+            path.move(to: CGPoint(x: center.x, y: center.y - length))
+            path.addLine(to: CGPoint(x: center.x, y: center.y - cornerRadius))
+            path.addQuadCurve(
+                to: CGPoint(x: center.x - cornerRadius, y: center.y),
+                control: CGPoint(x: center.x, y: center.y)
+            )
+            // Horizontal line extending left from corner
+            path.addLine(to: CGPoint(x: center.x - length, y: center.y))
+        }
+        
+        return path
+    }
 }
 
 
