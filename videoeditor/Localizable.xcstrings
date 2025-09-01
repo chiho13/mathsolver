@@ -85,9 +85,6 @@
         }
       }
     },
-    "Capture Photo" : {
-
-    },
     "Choose language pairs" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -507,6 +504,9 @@
           }
         }
       }
+    },
+    "Take photo of a math question" : {
+
     },
     "Terms of Service" : {
 

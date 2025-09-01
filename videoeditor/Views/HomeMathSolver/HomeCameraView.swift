@@ -21,6 +21,7 @@ struct CameraView: UIViewControllerRepresentable {
         var photoOutput: AVCapturePhotoOutput?
         var previewLayer: AVCaptureVideoPreviewLayer?
         var captureRect: CGRect?
+        var captureDevice: AVCaptureDevice?
         
         init(parent: CameraView) {
             self.parent = parent
@@ -31,6 +32,14 @@ struct CameraView: UIViewControllerRepresentable {
                 self,
                 selector: #selector(capturePhoto),
                 name: NSNotification.Name("CapturePhoto"),
+                object: nil
+            )
+            
+            // Listen for flash toggle notification
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(toggleFlash(_:)),
+                name: NSNotification.Name("ToggleFlash"),
                 object: nil
             )
         }
@@ -92,6 +101,8 @@ struct CameraView: UIViewControllerRepresentable {
               let input = try? AVCaptureDeviceInput(device: device) else {
             return viewController
         }
+        
+        context.coordinator.captureDevice = device
         
         let output = AVCapturePhotoOutput()
         context.coordinator.photoOutput = output
@@ -232,6 +243,20 @@ extension CameraView.Coordinator {
     @objc func capturePhoto() {
         let settings = AVCapturePhotoSettings()
         photoOutput?.capturePhoto(with: settings, delegate: self)
+    }
+    
+    @objc func toggleFlash(_ notification: Notification) {
+        guard let isFlashOn = notification.object as? Bool,
+              let device = captureDevice,
+              device.hasTorch else { return }
+        
+        do {
+            try device.lockForConfiguration()
+            device.torchMode = isFlashOn ? .on : .off
+            device.unlockForConfiguration()
+        } catch {
+            print("Error toggling flash: \(error)")
+        }
     }
 }
 

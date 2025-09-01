@@ -4,6 +4,7 @@ import SwiftData
 import PhotosUI
 import UniformTypeIdentifiers
 import AVFoundation
+import Mantis
 
 struct ContentView: View {
     @StateObject private var viewModel = VisionViewModel()
@@ -13,6 +14,11 @@ struct ContentView: View {
     @EnvironmentObject private var iap: IAPManager
     @State private var isCameraAuthorized: Bool = false
     @State private var capturedImage: UIImage? = nil
+    @State private var selectedPhotoItem: PhotosPickerItem? = nil
+    @State private var selectedPhotoImage: UIImage? = nil
+    @State private var showCropView: Bool = false
+    @State private var isCaptureButtonPressed: Bool = false
+    @State private var isTorchOn: Bool = false
 
     // Predefined prompt for math solving
     private let mathPrompt = "Solve the math problem in the image"
@@ -54,19 +60,7 @@ struct ContentView: View {
                         .padding()
                     }
 
-                    if isCameraAuthorized && capturedImage == nil {
-                        Button(action: {
-                            // Trigger capture in CameraView
-                            NotificationCenter.default.post(name: NSNotification.Name("CapturePhoto"), object: nil)
-                        }) {
-                            Label("Capture Photo", systemImage: "camera")
-                                .font(.headline)
-                                .padding()
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .padding(.horizontal)
-                    }
+                   
 
                     if let image = capturedImage {
                         Button(action: {
@@ -135,8 +129,8 @@ struct ContentView: View {
                                     // Top gradient with multiple stops
                                     LinearGradient(
                                         gradient: Gradient(stops: [
-                                            .init(color: Color.white.opacity(0.2), location: 0.0),
-                                            .init(color: Color.white.opacity(0.16), location: 0.15),
+                                            .init(color: Color.white.opacity(0.3), location: 0.0),
+                                            .init(color: Color.white.opacity(0.18), location: 0.15),
                                             .init(color: Color.white.opacity(0.12), location: 0.3),
                                             .init(color: Color.white.opacity(0.08), location: 0.45),
                                             .init(color: Color.white.opacity(0.05), location: 0.6),
@@ -169,9 +163,94 @@ struct ContentView: View {
                                     .frame(height: 300)
                                 }
                                 .ignoresSafeArea(.all)
+
+                                // Photo picker and capture buttons positioned at bottom
+                                VStack {
+                                    Spacer()
+                                    
+                                    if isCameraAuthorized && capturedImage == nil {
+                                        Text("Take photo of a math question")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(
+                                                Capsule()
+                                                    .fill(Color.black.opacity(0.8))
+                                            )
+                                            .padding(.bottom, 24)
+                                        
+                                        HStack(spacing: 60) {
+                                            // Photo picker button on the left
+                                            PhotosPicker(
+                                                selection: $selectedPhotoItem,
+                                                matching: .images,
+                                                photoLibrary: .shared()
+                                            ) {
+                                                ZStack {
+                                                    Circle()
+                                                        .stroke(Color.white, lineWidth: 2)
+                                                        .frame(width: 50, height: 50)
+                                                    
+                                                    Image(systemName: "photo.on.rectangle")
+                                                        .font(.system(size: 20))
+                                                        .foregroundColor(.white)
+                                                }
+                                            }
+                                            
+                                            // Camera capture button in the center
+                                            ZStack {
+                                                // Outer ring (stays same size)
+                                                Circle()
+                                                    .stroke(Color.white, lineWidth: 4)
+                                                    .frame(width: 70, height: 70)
+                                                
+                                                // Inner solid circle (shrinks on press)
+                                                ZStack {
+                                                    Circle()
+                                                        .fill(Color.white)
+                                                        .frame(width: 60, height: 60)
+                                                    
+                                                    Image("cameramath")
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                        .frame(width: 40, height: 40)
+                                                }
+                                                .scaleEffect(isCaptureButtonPressed ? 0.93 : 1.0)
+                                                .animation(.easeInOut(duration: 0.2), value: isCaptureButtonPressed)
+                                            }
+                                            .onTapGesture {
+                                                // Trigger capture in CameraView
+                                                NotificationCenter.default.post(name: NSNotification.Name("CapturePhoto"), object: nil)
+                                            }
+                                            .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+                                                isCaptureButtonPressed = pressing
+                                            }, perform: {})
+                                            
+                                            // Torch button on the right
+                                            Button(action: {
+                                                // Toggle torch/flashlight
+                                                toggleTorch()
+                                            }) {
+                                                ZStack {
+                                                    Circle()
+                                                        .stroke(Color.white, lineWidth: 2)
+                                                        .frame(width: 50, height: 50)
+                                                    
+                                                    Image(systemName: isTorchOn ? "bolt.fill" : "bolt")
+                                                        .font(.system(size: 20))
+                                                        .foregroundColor(.white)
+                                                }
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
+                                        }
+                                        .padding(.bottom, 50) // Add bottom padding for safe area
+                                    }
+                                }
             }
             .onAppear {
                 checkCameraAuthorization()
+                checkTorchStatus()
                 NotificationCenter.default.addObserver(forName: NSNotification.Name("ShowPremiumView"), object: nil, queue: .main) { _ in
                     showPremiumView = true
                 }
@@ -181,6 +260,47 @@ struct ContentView: View {
             }
             .fullScreenCover(isPresented: $showPremiumView) {
                 PremiumView(headline: "paywall-title")
+            }
+            .fullScreenCover(isPresented: $showCropView) {
+                if let image = selectedPhotoImage {
+                    MantisCropViewRepresentable(
+                        image: image,
+                        onCrop: { croppedImage in
+                            capturedImage = croppedImage
+                            selectedPhotoImage = nil
+                            showCropView = false
+                        },
+                        onCancel: {
+                            selectedPhotoImage = nil
+                            showCropView = false
+                        }
+                    )
+                    .ignoresSafeArea(.all)
+                }
+            }
+            .onChange(of: selectedPhotoItem) { _, newItem in
+                Task {
+                    if let newItem = newItem {
+                        print("Photo selected, loading...")
+                        do {
+                            if let data = try await newItem.loadTransferable(type: Data.self) {
+                                if let image = UIImage(data: data) {
+                                    print("Image loaded successfully, showing crop view")
+                                    selectedPhotoImage = image
+                                    showCropView = true
+                                    // Reset the picker selection
+                                    selectedPhotoItem = nil
+                                } else {
+                                    print("Failed to create UIImage from data")
+                                }
+                            } else {
+                                print("Failed to load data from photo item")
+                            }
+                        } catch {
+                            print("Error loading photo: \(error)")
+                        }
+                    }
+                }
             }
             .toolbar {
                 if iap.didCheckPremium && !iap.isPremium {
@@ -229,9 +349,85 @@ struct ContentView: View {
             errorMessage = "Unknown camera authorization status."
         }
     }
+    
+    private func checkTorchStatus() {
+        guard let device = AVCaptureDevice.default(for: .video), device.hasTorch else {
+            isTorchOn = false
+            return
+        }
+        
+        isTorchOn = device.torchMode == .on
+    }
+    
+    private func toggleTorch() {
+        guard let device = AVCaptureDevice.default(for: .video), device.hasTorch else {
+            return
+        }
+        
+        do {
+            try device.lockForConfiguration()
+            if device.torchMode == .off {
+                device.torchMode = .on
+                isTorchOn = true
+            } else {
+                device.torchMode = .off
+                isTorchOn = false
+            }
+            device.unlockForConfiguration()
+        } catch {
+            print("Torch could not be used: \(error)")
+        }
+    }
 }
 
+struct MantisCropViewRepresentable: UIViewControllerRepresentable {
+    typealias UIViewControllerType = CropViewController
 
+    let image: UIImage
+    let onCrop: (UIImage) -> Void
+    let onCancel: () -> Void
+
+    func makeUIViewController(context: Context) -> CropViewController {
+        let cropViewController = Mantis.cropViewController(image: image)
+        cropViewController.delegate = context.coordinator
+        cropViewController.modalPresentationStyle = .fullScreen
+        return cropViewController
+    }
+
+    func updateUIViewController(_ uiViewController: CropViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    class Coordinator: NSObject, CropViewControllerDelegate {
+        var parent: MantisCropViewRepresentable
+
+        init(_ parent: MantisCropViewRepresentable) {
+            self.parent = parent
+        }
+
+        func cropViewControllerDidCrop(_ cropViewController: CropViewController, cropped: UIImage, transformation: Transformation, cropInfo: CropInfo) {
+            parent.onCrop(cropped)
+        }
+
+        func cropViewControllerDidCancel(_ cropViewController: CropViewController, original: UIImage) {
+            parent.onCancel()
+        }
+        
+        func cropViewControllerDidFailToCrop(_ cropViewController: CropViewController, original: UIImage) {
+            parent.onCancel()
+        }
+        
+        func cropViewControllerDidBeginResize(_ cropViewController: CropViewController) {
+            // Optional method - no action needed
+        }
+        
+        func cropViewControllerDidEndResize(_ cropViewController: CropViewController, original: UIImage, cropInfo: CropInfo) {
+            // Optional method - no action needed
+        }
+    }
+}
 
 extension UserDefaults {
     static func resetDefaults() {
