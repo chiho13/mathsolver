@@ -509,6 +509,9 @@
     "Start Now" : {
 
     },
+    "Stop Animation" : {
+
+    },
     "Success" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -536,6 +539,9 @@
           }
         }
       }
+    },
+    "Test Animation" : {
+
     },
     "The Local Finder" : {
       "extractionState" : "manual",

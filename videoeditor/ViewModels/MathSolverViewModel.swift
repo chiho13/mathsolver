@@ -34,6 +34,10 @@ class VisionViewModel: ObservableObject {
     /// A boolean to control cropped area animation while solving
     @Published var isAnimatingCroppedArea: Bool = false
     
+
+    @Published var isAnimatingShutter: Bool = false
+    
+
     // MARK: - Private Properties
     
     private let visionService = VisionService()
@@ -95,6 +99,7 @@ class VisionViewModel: ObservableObject {
         
         isLoading = false
         isAnimatingCroppedArea = false
+        isAnimatingShutter = false 
     }
     
     // MARK: - Private Methods

@@ -54,28 +54,19 @@ struct ContentView: View {
                 VStack(spacing: 20) {
                     if isCameraAuthorized {
                         if let image = originalImage {
-                            ZStack {
-                                Image(uiImage: image)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .cornerRadius(10)
-                                    .padding()
-                                
-                                ResizableBracketsView(
-                                    captureRect: $captureRect,
-                                    screenBounds: UIScreen.main.bounds,
-                                    isResizingDisabled: true,
-                                    initialWidth: UIScreen.main.bounds.width * 0.88
-                                )
-
-                                // if viewModel.isLoading {
-                                //     GradientSpinner()
-                                // }
-                            }
+                            CapturedImageWithBracketView(
+                                image: image,
+                                captureRect: $captureRect,
+                                isAnimatingCroppedArea: viewModel.isAnimatingCroppedArea
+                            )
+                               .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .ignoresSafeArea(.all)
+                                .transition(.identity)
                         } else {
                             CameraWithBracketsView(capturedImage: $croppedImage, originalImage: $originalImage, viewModel: viewModel, triggerCapture: $triggerCapture, captureRect: $captureRect)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .ignoresSafeArea(.all)
+                                .transition(.identity)
                         }
                     } else {
                         VStack {
@@ -174,32 +165,28 @@ struct ContentView: View {
                                                 Circle()
                                                     .stroke(Color.white, lineWidth: 4)
                                                     .frame(width: 70, height: 70)
-                                                
                                                 // Inner solid circle (shrinks on press)
-                                                if viewModel.isAnimatingCroppedArea {
+                                                if viewModel.isAnimatingShutter || viewModel.isAnimatingCroppedArea {
                                                     GradientSpinner()
                                                 } else {
-                                                ZStack {
-                                                    Circle()
-                                                        .fill(Color.white)
-                                                        .frame(width: 60, height: 60)
-                                                    
-                                                    Image("cameramath")
-                                                        .resizable()
-                                                        .scaledToFit()
-                                                        .frame(width: 40, height: 40)
-                                                }
-                                                .scaleEffect(isCaptureButtonPressed ? 0.93 : 1.0)
-                                                .animation(.easeInOut(duration: 0.2), value: isCaptureButtonPressed)
+                                                    ZStack {
+                                                        Circle()
+                                                            .fill(Color.white)
+                                                            .frame(width: 60, height: 60)
+                                                        Image("cameramath")
+                                                            .resizable()
+                                                            .scaledToFit()
+                                                            .frame(width: 40, height: 40)
+                                                    }
+                                                    .scaleEffect(isCaptureButtonPressed ? 0.93 : 1.0)
+                                                    .animation(.easeInOut(duration: 0.2), value: isCaptureButtonPressed)
                                                 }
                                             }
                                             .onTapGesture {
-                                                // Trigger capture in CameraView
-                                                if viewModel.isAnimatingCroppedArea {
-                                                    viewModel.isAnimatingCroppedArea = false
-                                                } else {
-                                                    viewModel.isAnimatingCroppedArea = true
-                                                    // Auto-stop after 3 seconds for demo
+                                                // Step 1: User presses shutter button
+                                                if !viewModel.isAnimatingShutter && !viewModel.isAnimatingCroppedArea {
+                                                    viewModel.isAnimatingShutter = true
+                                                    // Step 2: Show spinner, trigger capture
                                                     triggerCapture = true
                                                 }
                                             }
@@ -228,75 +215,31 @@ struct ContentView: View {
                                         
                                         // Test animation button (only show when camera is active)
                                        
-                                        // Button(action: {
-                                        //     if viewModel.isAnimatingCroppedArea {
-                                        //         viewModel.isAnimatingCroppedArea = false
-                                        //     } else {
-                                        //         viewModel.isAnimatingCroppedArea = true
-                                        //         // Auto-stop after 3 seconds for demo
-                                        //         DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
-                                        //             viewModel.isAnimatingCroppedArea = false
-                                        //         }
-                                        //     }
-                                        // }) {
-                                        //     Text(viewModel.isAnimatingCroppedArea ? "Stop Animation" : "Test Animation")
-                                        //         .font(.system(size: 14, weight: .medium))
-                                        //         .foregroundColor(.white)
-                                        //         .padding(.horizontal, 16)
-                                        //         .padding(.vertical, 8)
-                                        //         .background(
-                                        //             Capsule()
-                                        //                 .fill(viewModel.isAnimatingCroppedArea ? Color.red.opacity(0.8) : Color.blue.opacity(0.8))
-                                        //         )
-                                        // }
-                                        // .padding(.bottom, 30)
+                                        Button(action: {
+                                            if viewModel.isAnimatingCroppedArea {
+                                                viewModel.isAnimatingCroppedArea = false
+                                            } else {
+                                                viewModel.isAnimatingCroppedArea = true
+                                                // Auto-stop after 3 seconds for demo
+                                                DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+                                                    viewModel.isAnimatingCroppedArea = false
+                                                }
+                                            }
+                                        }) {
+                                            Text(viewModel.isAnimatingCroppedArea ? "Stop Animation" : "Test Animation")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 16)
+                                                .padding(.vertical, 8)
+                                                .background(
+                                                    Capsule()
+                                                        .fill(viewModel.isAnimatingCroppedArea ? Color.red.opacity(0.8) : Color.blue.opacity(0.8))
+                                                )
+                                        }
+                                        .padding(.bottom, 30)
                                     }
                                 }
                 
-                // Buttons overlay - always on top of gradient
-                // if let image = originalImage {
-                //     VStack {
-                //         Spacer()
-                //         VStack(spacing: 16) {
-                //             Button(action: {
-                //                 Task {
-                //                     viewModel.selectedImage = croppedImage ?? image
-                //                     await viewModel.solveMathProblem()
-                //                 }
-                //             }) {
-                //                 if viewModel.isLoading {
-                //                     ProgressView()
-                //                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                //                         .frame(height: 20)
-                //                 } else {
-                //                     Text("Solve Math Problem")
-                //                         .font(.headline)
-                //                         .padding()
-                //                         .frame(maxWidth: .infinity)
-                //                 }
-                //             }
-                //             .buttonStyle(.borderedProminent)
-                //             .disabled(viewModel.isLoading)
-                            
-                //             // Button to retake photo
-                //             Button(action: {
-                //                 croppedImage = nil
-                //                 originalImage = nil
-                //                 viewModel.visionResponse = ""
-                //                 viewModel.errorMessage = nil
-                //             }) {
-                //                 Text("Retake Photo")
-                //                     .font(.headline)
-                //                     .padding()
-                //                     .frame(maxWidth: .infinity)
-                //             }
-                //             .buttonStyle(.bordered)
-                //         }
-                //         .padding(.horizontal)
-                //         .padding(.bottom, 50) // Safe area padding
-                //     }
-                //     .ignoresSafeArea(.all)
-                // }
             }
             .onAppear {
                 checkCameraAuthorization()
@@ -339,12 +282,20 @@ struct ContentView: View {
             }
             .onChange(of: viewModel.visionResponse) { _, newResponse in
                 if !newResponse.isEmpty {
-                    showSolutionSheet = true
+                    // Wait 1s for animation before showing sheet and ending animation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        viewModel.isAnimatingCroppedArea = false
+                        showSolutionSheet = true
+                    }
                 }
             }
             .onChange(of: viewModel.errorMessage) { _, newError in
                 if newError != nil {
-                    showSolutionSheet = true
+                    // Wait 1s for animation before showing sheet and ending animation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        viewModel.isAnimatingCroppedArea = false
+                        showSolutionSheet = true
+                    }
                 }
             }
             .sheet(isPresented: $showSolutionSheet, onDismiss: {

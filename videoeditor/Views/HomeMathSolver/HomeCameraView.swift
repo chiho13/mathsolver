@@ -13,6 +13,7 @@ import UniformTypeIdentifiers
 import AVFoundation
 
 
+
 struct CameraView: UIViewControllerRepresentable {
     @Binding var capturedImage: UIImage?
     @Binding var originalImage: UIImage?
@@ -26,6 +27,8 @@ struct CameraView: UIViewControllerRepresentable {
         var previewLayer: AVCaptureVideoPreviewLayer?
         var captureDevice: AVCaptureDevice?
         var initialZoomFactor: CGFloat = 1.0
+        var currentZoomFactor: CGFloat = 1.0 // Tracks the actual current zoom factor
+        var snapshotView: UIImageView? // To display frozen preview
         
         init(parent: CameraView) {
             self.parent = parent
@@ -48,23 +51,41 @@ struct CameraView: UIViewControllerRepresentable {
             guard let imageData = photo.fileDataRepresentation(),
                   let image = UIImage(data: imageData) else { return }
 
-                    guard let previewLayer = self.previewLayer else {
-            DispatchQueue.main.async {
-                self.parent.originalImage = image
-                self.parent.capturedImage = image
-                self.parent.viewModel.isAnimatingCroppedArea = false
+            if self.previewLayer == nil {
+                DispatchQueue.main.async {
+                    let zoomedImage = self.parent.cropForZoom(image, zoomFactor: self.currentZoomFactor)
+                    self.parent.originalImage = zoomedImage ?? image
+                    self.parent.capturedImage = zoomedImage ?? image
+                    self.parent.viewModel.isAnimatingCroppedArea = false
+                }
+                return
             }
-            return
-        }
 
-        let captureRect = self.parent.captureRect
-        let metadataOutputRect = previewLayer.metadataOutputRectConverted(fromLayerRect: captureRect)
+            let captureRect = self.parent.captureRect
+            let metadataOutputRect = previewLayer!.metadataOutputRectConverted(fromLayerRect: captureRect)
             let croppedImage = self.cropImage(image, to: metadataOutputRect)
 
             DispatchQueue.main.async {
                 self.parent.originalImage = image
                 self.parent.capturedImage = croppedImage ?? image
-                self.parent.viewModel.isAnimatingCroppedArea = false
+                self.parent.viewModel.isAnimatingShutter = false
+                self.parent.viewModel.isAnimatingCroppedArea = true
+            }
+            
+            // Reapply zoom after capture
+            reapplyZoomFactor()
+        }
+
+        private func reapplyZoomFactor() {
+            guard let device = captureDevice else { return }
+            do {
+                try device.lockForConfiguration()
+                defer { device.unlockForConfiguration() }
+                let maxZoomFactor = device.activeFormat.videoMaxZoomFactor
+                device.videoZoomFactor = max(1.0, min(currentZoomFactor, maxZoomFactor))
+                print("Reapplied zoom factor: \(currentZoomFactor)")
+            } catch {
+                print("Error reapplying zoom factor: \(error)")
             }
         }
 
@@ -104,6 +125,18 @@ struct CameraView: UIViewControllerRepresentable {
         }
         
         context.coordinator.captureDevice = device
+        context.coordinator.currentZoomFactor = device.videoZoomFactor // Initialize currentZoomFactor
+        
+        // Apply currentZoomFactor to ensure zoom persists across view updates
+        do {
+            try device.lockForConfiguration()
+            defer { device.unlockForConfiguration() }
+            let maxZoomFactor = device.activeFormat.videoMaxZoomFactor
+            device.videoZoomFactor = max(1.0, min(context.coordinator.currentZoomFactor, maxZoomFactor))
+            print("Applied zoom factor on setup: \(context.coordinator.currentZoomFactor)")
+        } catch {
+            print("Error applying zoom factor on setup: \(error)")
+        }
         
         let output = AVCapturePhotoOutput()
         context.coordinator.photoOutput = output
@@ -183,106 +216,29 @@ struct CameraView: UIViewControllerRepresentable {
         }
     }
     
-    private func addPulsingAnimation(to view: UIView) {
-        // Remove any existing animation first
-        removePulsingAnimation(from: view)
-        
-        // Create a container view that will be clipped by the mask
-        let animationContainer = UIView(frame: view.bounds)
-        animationContainer.backgroundColor = .clear
-        animationContainer.tag = 1001 // Tag to identify the animation container
-        
-        // Add the container to the view and bring it to front so it appears above everything
-        view.addSubview(animationContainer)
-        view.bringSubviewToFront(animationContainer)
-        
-        // Create 12 white pulsing dots at random positions within the capture rect
-        let dotSize: CGFloat = 6.0
-        let numberOfDots = 12
-        
-        // Calculate usable area (leave some margin from edges)
-        let margin: CGFloat = 20.0
-        let usableRect = CGRect(
-            x: captureRect.origin.x + margin,
-            y: captureRect.origin.y + margin,
-            width: captureRect.width - (margin * 2),
-            height: captureRect.height - (margin * 2)
-        )
-        
-        for i in 0..<numberOfDots {
-            // Generate random position within the usable area
-            let randomX = usableRect.origin.x + CGFloat.random(in: 0...usableRect.width - dotSize)
-            let randomY = usableRect.origin.y + CGFloat.random(in: 0...usableRect.height - dotSize)
-            
-            // Create white dot
-            let dot = UIView(frame: CGRect(x: randomX, y: randomY, width: dotSize, height: dotSize))
-            dot.backgroundColor = UIColor.white
-            dot.layer.cornerRadius = dotSize / 2
-            dot.tag = 1000 + i // Tag to identify dots (1000-1011)
-            
-            // Add subtle shadow for better visibility
-            dot.layer.shadowColor = UIColor.white.cgColor
-            dot.layer.shadowOffset = CGSize(width: 0, height: 0)
-            dot.layer.shadowRadius = 3.0
-            dot.layer.shadowOpacity = 0.8
-            
-            animationContainer.addSubview(dot)
-            
-            // Create random pulsing animation for each dot
-            let pulseAnimation = CABasicAnimation(keyPath: "opacity")
-            pulseAnimation.fromValue = 1.0
-            pulseAnimation.toValue = 0.2
-            
-            // Random duration between 0.8 and 2.0 seconds
-            let randomDuration = Double.random(in: 0.8...2.0)
-            pulseAnimation.duration = randomDuration
-            
-            // Random delay to stagger the animations
-            let randomDelay = Double.random(in: 0...1.0)
-            pulseAnimation.beginTime = CACurrentMediaTime() + randomDelay
-            
-            pulseAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            pulseAnimation.autoreverses = true
-            pulseAnimation.repeatCount = .infinity
-            
-            // Add scale animation for more dynamic effect
-            let scaleAnimation = CABasicAnimation(keyPath: "transform.scale")
-            scaleAnimation.fromValue = 1.0
-            scaleAnimation.toValue = 1.5
-            scaleAnimation.duration = randomDuration
-            scaleAnimation.beginTime = CACurrentMediaTime() + randomDelay
-            scaleAnimation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            scaleAnimation.autoreverses = true
-            scaleAnimation.repeatCount = .infinity
-            
-            // Group the animations
-            let animationGroup = CAAnimationGroup()
-            animationGroup.animations = [pulseAnimation, scaleAnimation]
-            animationGroup.duration = randomDuration
-            animationGroup.beginTime = CACurrentMediaTime() + randomDelay
-            animationGroup.repeatCount = .infinity
-            
-            dot.layer.add(animationGroup, forKey: "pulsingDot\(i)")
-        }
-        
-        print("Added \(numberOfDots) pulsing dots in capture area")
-    }
     
-    private func removePulsingAnimation(from view: UIView) {
-        // Remove the animation container which contains all animation elements
-        if let animationContainer = view.subviews.first(where: { $0.tag == 1001 }) {
-            print("Removing animation container with dots")
-            animationContainer.removeFromSuperview()
+    
+    private func cropForZoom(_ image: UIImage, zoomFactor: CGFloat) -> UIImage? {
+        guard let cgImage = image.cgImage else { return nil }
+
+        let width = CGFloat(cgImage.width)
+        let height = CGFloat(cgImage.height)
+
+        // Calculate crop rect centered
+        let cropWidth = width / zoomFactor
+        let cropHeight = height / zoomFactor
+        let originX = (width - cropWidth) / 2
+        let originY = (height - cropHeight) / 2
+
+        let cropRect = CGRect(x: originX, y: originY, width: cropWidth, height: cropHeight)
+
+        if let croppedCGImage = cgImage.cropping(to: cropRect) {
+            return UIImage(cgImage: croppedCGImage, scale: image.scale, orientation: image.imageOrientation)
         }
-        
-        // Fallback: remove individual dots if container doesn't exist
-        for tag in 1000...1011 {
-            if let dot = view.subviews.first(where: { $0.tag == tag }) {
-                dot.removeFromSuperview()
-            }
-        }
+        return nil
     }
 }
+
 
 protocol CameraViewControllerDelegate: AnyObject {
     func didCaptureImage(_ image: UIImage)
@@ -311,7 +267,7 @@ extension CameraView.Coordinator {
                 defer { device.unlockForConfiguration() }
                 
                 device.videoZoomFactor = max(1.0, min(desiredZoomFactor, maxZoomFactor))
-                
+                currentZoomFactor = device.videoZoomFactor // Update currentZoomFactor
             } catch {
                 print("Error locking device for configuration: \(error)")
             }
@@ -346,94 +302,90 @@ extension CameraView.Coordinator {
         }
     }
 
-   
-   private func showFocusIndicator(at point: CGPoint, in view: UIView?) {
-    guard let view = view else { return }
+    private func showFocusIndicator(at point: CGPoint, in view: UIView?) {
+        guard let view = view else { return }
 
-    // Remove existing indicators
-    view.layer.sublayers?.filter { $0.name == "focusIndicator" }.forEach { $0.removeFromSuperlayer() }
+        // Remove existing indicators
+        view.layer.sublayers?.filter { $0.name == "focusIndicator" }.forEach { $0.removeFromSuperlayer() }
 
-    let indicatorLayer = CAShapeLayer()
-    indicatorLayer.name = "focusIndicator"
-    let indicatorSize: CGFloat = 35
-    let indicatorRect = CGRect(
-        x: point.x - indicatorSize / 2,
-        y: point.y - indicatorSize / 2,
-        width: indicatorSize,
-        height: indicatorSize
-    )
-    indicatorLayer.path = UIBezierPath(ovalIn: indicatorRect).cgPath
-    indicatorLayer.fillColor = UIColor.clear.cgColor
-    indicatorLayer.strokeColor = UIColor.white.cgColor
-    indicatorLayer.lineWidth = 2
-    indicatorLayer.opacity = 0.0
-    view.layer.addSublayer(indicatorLayer)
+        let indicatorLayer = CAShapeLayer()
+        indicatorLayer.name = "focusIndicator"
+        let indicatorSize: CGFloat = 35
+        let indicatorRect = CGRect(
+            x: point.x - indicatorSize / 2,
+            y: point.y - indicatorSize / 2,
+            width: indicatorSize,
+            height: indicatorSize
+        )
+        indicatorLayer.path = UIBezierPath(ovalIn: indicatorRect).cgPath
+        indicatorLayer.fillColor = UIColor.clear.cgColor
+        indicatorLayer.strokeColor = UIColor.white.cgColor
+        indicatorLayer.lineWidth = 2
+        indicatorLayer.opacity = 0.0
+        view.layer.addSublayer(indicatorLayer)
 
-    // Fade-in
-    let fadeIn = CABasicAnimation(keyPath: "opacity")
-    fadeIn.fromValue = 0
-    fadeIn.toValue = 1
-    fadeIn.duration = 0.3
+        // Fade-in
+        let fadeIn = CABasicAnimation(keyPath: "opacity")
+        fadeIn.fromValue = 0
+        fadeIn.toValue = 1
+        fadeIn.duration = 0.3
 
-    // Scale-in path (105% → 100%)
-    let scaleInPath = CABasicAnimation(keyPath: "path")
-    scaleInPath.fromValue = UIBezierPath(
-        ovalIn: indicatorRect.insetBy(dx: indicatorSize*0.05, dy: indicatorSize*0.05) // slightly bigger
-    ).cgPath
-    scaleInPath.toValue = UIBezierPath(ovalIn: indicatorRect).cgPath
-    scaleInPath.duration = 0.3
-    scaleInPath.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        // Scale-in path (105% → 100%)
+        let scaleInPath = CABasicAnimation(keyPath: "path")
+        scaleInPath.fromValue = UIBezierPath(
+            ovalIn: indicatorRect.insetBy(dx: indicatorSize*0.05, dy: indicatorSize*0.05) // slightly bigger
+        ).cgPath
+        scaleInPath.toValue = UIBezierPath(ovalIn: indicatorRect).cgPath
+        scaleInPath.duration = 0.3
+        scaleInPath.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
 
-    let appearGroup = CAAnimationGroup()
-    appearGroup.animations = [fadeIn, scaleInPath]
-    appearGroup.duration = 0.3
-    appearGroup.beginTime = 0
+        let appearGroup = CAAnimationGroup()
+        appearGroup.animations = [fadeIn, scaleInPath]
+        appearGroup.duration = 0.3
+        appearGroup.beginTime = 0
 
-    // Pulse
-    let pulse = CABasicAnimation(keyPath: "opacity")
-    pulse.fromValue = 1
-    pulse.toValue = 0.4
-    pulse.duration = 0.1
-    pulse.autoreverses = true
-    pulse.repeatCount = 2
-    pulse.beginTime = appearGroup.beginTime + appearGroup.duration
+        // Pulse
+        let pulse = CABasicAnimation(keyPath: "opacity")
+        pulse.fromValue = 1
+        pulse.toValue = 0.4
+        pulse.duration = 0.1
+        pulse.autoreverses = true
+        pulse.repeatCount = 2
+        pulse.beginTime = appearGroup.beginTime + appearGroup.duration
 
-    // Fade-out
-    let fadeOut = CABasicAnimation(keyPath: "opacity")
-    fadeOut.fromValue = 1
-    fadeOut.toValue = 0
-    fadeOut.duration = 0.5
+        // Fade-out
+        let fadeOut = CABasicAnimation(keyPath: "opacity")
+        fadeOut.fromValue = 1
+        fadeOut.toValue = 0
+        fadeOut.duration = 0.5
 
-    // Scale-out path (100% → 96%)
-    let scaleOutPath = CABasicAnimation(keyPath: "path")
-    scaleOutPath.fromValue = UIBezierPath(ovalIn: indicatorRect).cgPath
-    scaleOutPath.toValue = UIBezierPath(
-        ovalIn: indicatorRect.insetBy(dx: indicatorSize*0.05, dy: indicatorSize*0.05) // slightly smaller
-    ).cgPath
-    scaleOutPath.duration = 0.3
-    scaleOutPath.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        // Scale-out path (100% → 96%)
+        let scaleOutPath = CABasicAnimation(keyPath: "path")
+        scaleOutPath.fromValue = UIBezierPath(ovalIn: indicatorRect).cgPath
+        scaleOutPath.toValue = UIBezierPath(
+            ovalIn: indicatorRect.insetBy(dx: indicatorSize*0.05, dy: indicatorSize*0.05) // slightly smaller
+        ).cgPath
+        scaleOutPath.duration = 0.3
+        scaleOutPath.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
 
-    let disappearGroup = CAAnimationGroup()
-    disappearGroup.animations = [fadeOut, scaleOutPath]
-    disappearGroup.duration = 0.2
-    disappearGroup.beginTime = pulse.beginTime + (pulse.duration * Double(pulse.repeatCount) * 2.0)
+        let disappearGroup = CAAnimationGroup()
+        disappearGroup.animations = [fadeOut, scaleOutPath]
+        disappearGroup.duration = 0.2
+        disappearGroup.beginTime = pulse.beginTime + (pulse.duration * Double(pulse.repeatCount) * 2.0)
 
-    // Master group
-    let masterGroup = CAAnimationGroup()
-    masterGroup.animations = [appearGroup, pulse, disappearGroup]
-    masterGroup.duration = disappearGroup.beginTime + disappearGroup.duration
-    masterGroup.fillMode = .forwards
-    masterGroup.isRemovedOnCompletion = false
+        // Master group
+        let masterGroup = CAAnimationGroup()
+        masterGroup.animations = [appearGroup, pulse, disappearGroup]
+        masterGroup.duration = disappearGroup.beginTime + disappearGroup.duration
+        masterGroup.fillMode = .forwards
+        masterGroup.isRemovedOnCompletion = false
 
-    indicatorLayer.add(masterGroup, forKey: "focusAnimation")
+        indicatorLayer.add(masterGroup, forKey: "focusAnimation")
 
-    DispatchQueue.main.asyncAfter(deadline: .now() + masterGroup.duration) {
-        indicatorLayer.removeFromSuperlayer()
+        DispatchQueue.main.asyncAfter(deadline: .now() + masterGroup.duration) {
+            indicatorLayer.removeFromSuperlayer()
+        }
     }
-}
-
-
-
     
     @objc func toggleFlash(_ notification: Notification) {
         guard let isFlashOn = notification.object as? Bool,
