@@ -13,13 +13,31 @@ struct ContentView: View {
     @State private var showPremiumView: Bool = false
     @EnvironmentObject private var iap: IAPManager
     @State private var isCameraAuthorized: Bool = false
-    @State private var capturedImage: UIImage? = nil
+    @State private var croppedImage: UIImage? = nil
+    @State private var originalImage: UIImage? = nil
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var selectedPhotoImage: UIImage? = nil
     @State private var showCropView: Bool = false
     @State private var isCaptureButtonPressed: Bool = false
     @State private var isTorchOn: Bool = false
     @State private var triggerCapture: Bool = false
+    @State private var showSolutionSheet: Bool = false
+    @State private var captureRect: CGRect = {
+        let screenBounds = UIScreen.main.bounds
+        let screenWidth = screenBounds.width
+        let screenHeight = screenBounds.height
+        
+        let rectWidth = screenWidth * 0.85  // 85% of screen width
+        let rectHeight: CGFloat = 120.0
+        
+        // Center horizontally on screen
+        let rectX = (screenWidth - rectWidth) / 2.0
+        
+        // Center vertically in the screen, then move up 50px
+        let rectY = (screenHeight - rectHeight) / 2.0 - 40.0
+        
+        return CGRect(x: rectX, y: rectY, width: rectWidth, height: rectHeight)
+    }()
 
     // Predefined prompt for math solving
     private let mathPrompt = "Solve the math problem in the image"
@@ -35,14 +53,27 @@ struct ContentView: View {
                 
                 VStack(spacing: 20) {
                     if isCameraAuthorized {
-                        if let image = capturedImage {
-                            Image(uiImage: image)
-                                .resizable()
-                                .scaledToFit()
-                                .cornerRadius(10)
-                                .padding()
+                        if let image = originalImage {
+                            ZStack {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .cornerRadius(10)
+                                    .padding()
+                                
+                                ResizableBracketsView(
+                                    captureRect: $captureRect,
+                                    screenBounds: UIScreen.main.bounds,
+                                    isResizingDisabled: true,
+                                    initialWidth: UIScreen.main.bounds.width * 0.88
+                                )
+
+                                // if viewModel.isLoading {
+                                //     GradientSpinner()
+                                // }
+                            }
                         } else {
-                            CameraWithBracketsView(capturedImage: $capturedImage, viewModel: viewModel, triggerCapture: $triggerCapture)
+                            CameraWithBracketsView(capturedImage: $croppedImage, originalImage: $originalImage, viewModel: viewModel, triggerCapture: $triggerCapture, captureRect: $captureRect)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .ignoresSafeArea(.all)
                         }
@@ -59,68 +90,6 @@ struct ContentView: View {
                         .background(Color(.secondarySystemBackground))
                         .cornerRadius(10)
                         .padding()
-                    }
-
-                   
-
-
-
-                    if viewModel.isLoading {
-                        GradientSpinner()
-                    .padding()
-                    }
-
-                    if !viewModel.visionResponse.isEmpty {
-                        ScrollView {
-                            Text(viewModel.visionResponse)
-                                .padding()
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color(.secondarySystemBackground))
-                                .cornerRadius(10)
-                        }
-                        .padding()
-                    }
-
-                    if let errorMessage = viewModel.errorMessage ?? errorMessage {
-                        VStack(spacing: 12) {
-                            Text(errorMessage)
-                                .foregroundColor(.red)
-                                .padding()
-                            
-                            // Show helpful tips for no math content errors
-                            if errorMessage.contains("No math problems detected") || errorMessage.contains("doesn't appear to contain mathematical content") {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("📝 Tips for better results:")
-                                        .font(.headline)
-                                        .foregroundColor(.blue)
-                                    
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        HStack(alignment: .top) {
-                                            Text("•")
-                                            Text("Make sure the image contains clear mathematical equations, formulas, or word problems")
-                                        }
-                                        HStack(alignment: .top) {
-                                            Text("•")
-                                            Text("Ensure text is readable and not blurry")
-                                        }
-                                        HStack(alignment: .top) {
-                                            Text("•")
-                                            Text("Include the full problem, not just parts of it")
-                                        }
-                                        HStack(alignment: .top) {
-                                            Text("•")
-                                            Text("Good lighting helps with text recognition")
-                                        }
-                                    }
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.secondary)
-                                }
-                                .padding()
-                                .background(Color.blue.opacity(0.1))
-                                .cornerRadius(10)
-                                .padding(.horizontal)
-                            }
-                        }
                     }
 
                     Spacer()
@@ -169,7 +138,7 @@ struct ContentView: View {
                                 VStack {
                                     Spacer()
                                     
-                                    if isCameraAuthorized && capturedImage == nil {
+                                    if isCameraAuthorized && originalImage == nil {
                                         Text("Take photo of a math question")
                                             .font(.system(size: 12, weight: .medium))
                                             .foregroundColor(.white)
@@ -255,43 +224,43 @@ struct ContentView: View {
                                             }
                                             .buttonStyle(PlainButtonStyle())
                                         }
-                                        .padding(.bottom, 20) // Add bottom padding for safe area
+                                        .padding(.bottom, 40) // Add bottom padding for safe area
                                         
                                         // Test animation button (only show when camera is active)
                                        
-                                        Button(action: {
-                                            if viewModel.isAnimatingCroppedArea {
-                                                viewModel.isAnimatingCroppedArea = false
-                                            } else {
-                                                viewModel.isAnimatingCroppedArea = true
-                                                // Auto-stop after 3 seconds for demo
-                                                DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
-                                                    viewModel.isAnimatingCroppedArea = false
-                                                }
-                                            }
-                                        }) {
-                                            Text(viewModel.isAnimatingCroppedArea ? "Stop Animation" : "Test Animation")
-                                                .font(.system(size: 14, weight: .medium))
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 16)
-                                                .padding(.vertical, 8)
-                                                .background(
-                                                    Capsule()
-                                                        .fill(viewModel.isAnimatingCroppedArea ? Color.red.opacity(0.8) : Color.blue.opacity(0.8))
-                                                )
-                                        }
-                                        .padding(.bottom, 30)
+                                        // Button(action: {
+                                        //     if viewModel.isAnimatingCroppedArea {
+                                        //         viewModel.isAnimatingCroppedArea = false
+                                        //     } else {
+                                        //         viewModel.isAnimatingCroppedArea = true
+                                        //         // Auto-stop after 3 seconds for demo
+                                        //         DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+                                        //             viewModel.isAnimatingCroppedArea = false
+                                        //         }
+                                        //     }
+                                        // }) {
+                                        //     Text(viewModel.isAnimatingCroppedArea ? "Stop Animation" : "Test Animation")
+                                        //         .font(.system(size: 14, weight: .medium))
+                                        //         .foregroundColor(.white)
+                                        //         .padding(.horizontal, 16)
+                                        //         .padding(.vertical, 8)
+                                        //         .background(
+                                        //             Capsule()
+                                        //                 .fill(viewModel.isAnimatingCroppedArea ? Color.red.opacity(0.8) : Color.blue.opacity(0.8))
+                                        //         )
+                                        // }
+                                        // .padding(.bottom, 30)
                                     }
                                 }
                 
                 // Buttons overlay - always on top of gradient
-                // if let image = capturedImage {
+                // if let image = originalImage {
                 //     VStack {
                 //         Spacer()
                 //         VStack(spacing: 16) {
                 //             Button(action: {
                 //                 Task {
-                //                     viewModel.selectedImage = image
+                //                     viewModel.selectedImage = croppedImage ?? image
                 //                     await viewModel.solveMathProblem()
                 //                 }
                 //             }) {
@@ -311,7 +280,8 @@ struct ContentView: View {
                             
                 //             // Button to retake photo
                 //             Button(action: {
-                //                 capturedImage = nil
+                //                 croppedImage = nil
+                //                 originalImage = nil
                 //                 viewModel.visionResponse = ""
                 //                 viewModel.errorMessage = nil
                 //             }) {
@@ -346,7 +316,8 @@ struct ContentView: View {
                     MantisCropViewRepresentable(
                         image: image,
                         onCrop: { croppedImage in
-                            capturedImage = croppedImage
+                            self.croppedImage = croppedImage
+                            self.originalImage = croppedImage
                             selectedPhotoImage = nil
                             showCropView = false
                         },
@@ -356,6 +327,90 @@ struct ContentView: View {
                         }
                     )
                     .ignoresSafeArea(.all)
+                }
+            }
+            .onChange(of: croppedImage) { _, newCroppedImage in
+                if let imageToSolve = newCroppedImage {
+                    Task {
+                        viewModel.selectedImage = imageToSolve
+                        await viewModel.solveMathProblem()
+                    }
+                }
+            }
+            .onChange(of: viewModel.visionResponse) { _, newResponse in
+                if !newResponse.isEmpty {
+                    showSolutionSheet = true
+                }
+            }
+            .onChange(of: viewModel.errorMessage) { _, newError in
+                if newError != nil {
+                    showSolutionSheet = true
+                }
+            }
+            .sheet(isPresented: $showSolutionSheet, onDismiss: {
+                originalImage = nil
+                croppedImage = nil
+                viewModel.visionResponse = ""
+                viewModel.errorMessage = nil
+            }) {
+                NavigationView {
+                    VStack {
+                        if !viewModel.visionResponse.isEmpty {
+                            ScrollView {
+                                Text(viewModel.visionResponse)
+                                    .padding()
+                            }
+                        } else if let errorMessage = viewModel.errorMessage {
+                            VStack(spacing: 12) {
+                                Text(errorMessage.contains("No math problems detected") || errorMessage.contains("doesn't appear to contain mathematical content") ? "No math problem detected. Please try again." : errorMessage)
+                                    .foregroundColor(.red)
+                                    .padding()
+                                
+                                if errorMessage.contains("No math problems detected") || errorMessage.contains("doesn't appear to contain mathematical content") {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("📝 Tips for better results:")
+                                            .font(.headline)
+                                            .foregroundColor(.blue)
+                                        
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack(alignment: .top) {
+                                                Text("•")
+                                                Text("Make sure the image contains clear mathematical equations, formulas, or word problems")
+                                            }
+                                            HStack(alignment: .top) {
+                                                Text("•")
+                                                Text("Ensure text is readable and not blurry")
+                                            }
+                                            HStack(alignment: .top) {
+                                                Text("•")
+                                                Text("Include the full problem, not just parts of it")
+                                            }
+                                            HStack(alignment: .top) {
+                                                Text("•")
+                                                Text("Good lighting helps with text recognition")
+                                            }
+                                        }
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.secondary)
+                                    }
+                                    .padding()
+                                    .background(Color.blue.opacity(0.1))
+                                    .cornerRadius(10)
+                                    .padding(.horizontal)
+                                }
+                            }
+                        }
+                        Spacer()
+                    }
+                    .navigationTitle("Solution")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") {
+                                showSolutionSheet = false
+                            }
+                        }
+                    }
                 }
             }
             .onChange(of: selectedPhotoItem) { _, newItem in

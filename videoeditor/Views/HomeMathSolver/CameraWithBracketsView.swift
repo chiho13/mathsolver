@@ -9,30 +9,16 @@ import SwiftUI
 
 struct CameraWithBracketsView: View {
     @Binding var capturedImage: UIImage?
+    @Binding var originalImage: UIImage?
     @ObservedObject var viewModel: VisionViewModel
     @Binding var triggerCapture: Bool
+    @Binding var captureRect: CGRect
     @State private var showDotsView: Bool = false
-    @State private var captureRect: CGRect = {
-        let screenBounds = UIScreen.main.bounds
-        let screenWidth = screenBounds.width
-        let screenHeight = screenBounds.height
-        
-        let rectWidth = screenWidth * 0.85  // 85% of screen width
-        let rectHeight: CGFloat = 120.0
-        
-        // Center horizontally on screen
-        let rectX = (screenWidth - rectWidth) / 2.0
-        
-        // Center vertically in the screen, then move up 50px
-        let rectY = (screenHeight - rectHeight) / 2.0 - 40.0
-        
-        return CGRect(x: rectX, y: rectY, width: rectWidth, height: rectHeight)
-    }()
     
     var body: some View {
         ZStack {
             // Camera view with overlay
-            CameraView(capturedImage: $capturedImage, captureRect: $captureRect, viewModel: viewModel, triggerCapture: $triggerCapture)
+            CameraView(capturedImage: $capturedImage, originalImage: $originalImage, captureRect: $captureRect, viewModel: viewModel, triggerCapture: $triggerCapture)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea(.all)
                 .id(viewModel.isAnimatingCroppedArea) // Force update when animation state changes
@@ -42,9 +28,8 @@ struct CameraWithBracketsView: View {
                 captureRect: $captureRect,
                 screenBounds: UIScreen.main.bounds,
                 isResizingDisabled: viewModel.isAnimatingCroppedArea,
-                initialWidth: UIScreen.main.bounds.width * 0.85
+                initialWidth: UIScreen.main.bounds.width * 0.88
             )
-            .allowsHitTesting(true)
             
             // Animation overlay - appears above brackets
             if showDotsView {

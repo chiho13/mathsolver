@@ -55,7 +55,7 @@ struct ResizableBracketsView: View {
             .animation(.easeInOut(duration: 0.2), value: crosshairOpacity)
             
         }
-        .contentShape(Rectangle())
+        .contentShape(cornerHitTestShape()) // Updated to custom shape for targeted hit testing
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { value in
@@ -72,6 +72,23 @@ struct ResizableBracketsView: View {
                 }
         )
         .disabled(isResizingDisabled)
+    }
+    
+    // Custom shape for hit testing only around corners
+    private func cornerHitTestShape() -> some Shape {
+        Path { path in
+            let allCorners: [CornerPosition] = [.topLeft, .topRight, .bottomLeft, .bottomRight]
+            for corner in allCorners {
+                let handlePosition = getCornerPosition(corner)
+                let handleRect = CGRect(
+                    x: handlePosition.x - handleSize / 2,
+                    y: handlePosition.y - handleSize / 2,
+                    width: handleSize,
+                    height: handleSize
+                )
+                path.addRect(handleRect)
+            }
+        }
     }
     
     private func corner(for location: CGPoint) -> CornerPosition? {
@@ -225,6 +242,3 @@ struct BracketShape: Shape {
         return path
     }
 }
-
-
-

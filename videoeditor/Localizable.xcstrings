@@ -146,6 +146,9 @@
         }
       }
     },
+    "Done" : {
+
+    },
     "Ensure text is readable and not blurry" : {
 
     },
@@ -422,9 +425,6 @@
     "Restore Purchases" : {
 
     },
-    "Retake Photo" : {
-
-    },
     "Search for places, news, or tips..." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -486,10 +486,10 @@
     "Select Photo" : {
 
     },
-    "Solve" : {
+    "Solution" : {
 
     },
-    "Solve Math Problem" : {
+    "Solve" : {
 
     },
     "Solving..." : {
@@ -507,9 +507,6 @@
       }
     },
     "Start Now" : {
-
-    },
-    "Stop Animation" : {
 
     },
     "Success" : {
@@ -539,9 +536,6 @@
           }
         }
       }
-    },
-    "Test Animation" : {
-
     },
     "The Local Finder" : {
       "extractionState" : "manual",

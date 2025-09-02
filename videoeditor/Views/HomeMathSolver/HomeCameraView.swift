@@ -15,6 +15,7 @@ import AVFoundation
 
 struct CameraView: UIViewControllerRepresentable {
     @Binding var capturedImage: UIImage?
+    @Binding var originalImage: UIImage?
     @Binding var captureRect: CGRect
     @ObservedObject var viewModel: VisionViewModel
     @Binding var triggerCapture: Bool
@@ -24,6 +25,7 @@ struct CameraView: UIViewControllerRepresentable {
         var photoOutput: AVCapturePhotoOutput?
         var previewLayer: AVCaptureVideoPreviewLayer?
         var captureDevice: AVCaptureDevice?
+        var initialZoomFactor: CGFloat = 1.0
         
         init(parent: CameraView) {
             self.parent = parent
@@ -48,6 +50,7 @@ struct CameraView: UIViewControllerRepresentable {
 
                     guard let previewLayer = self.previewLayer else {
             DispatchQueue.main.async {
+                self.parent.originalImage = image
                 self.parent.capturedImage = image
                 self.parent.viewModel.isAnimatingCroppedArea = false
             }
@@ -59,6 +62,7 @@ struct CameraView: UIViewControllerRepresentable {
             let croppedImage = self.cropImage(image, to: metadataOutputRect)
 
             DispatchQueue.main.async {
+                self.parent.originalImage = image
                 self.parent.capturedImage = croppedImage ?? image
                 self.parent.viewModel.isAnimatingCroppedArea = false
             }
@@ -294,17 +298,20 @@ extension CameraView.Coordinator {
     @objc func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
         guard let device = captureDevice else { return }
 
+        if gesture.state == .began {
+            initialZoomFactor = device.videoZoomFactor
+        }
+
         if gesture.state == .changed {
             let maxZoomFactor = device.activeFormat.videoMaxZoomFactor
-            let pinchVelocityDividerFactor: CGFloat = 10.0 // Slower zoom
-
+            let desiredZoomFactor = initialZoomFactor * gesture.scale
+            
             do {
                 try device.lockForConfiguration()
                 defer { device.unlockForConfiguration() }
-
-                let desiredZoomFactor = device.videoZoomFactor + atan2(gesture.velocity, pinchVelocityDividerFactor)
+                
                 device.videoZoomFactor = max(1.0, min(desiredZoomFactor, maxZoomFactor))
-
+                
             } catch {
                 print("Error locking device for configuration: \(error)")
             }
@@ -322,6 +329,12 @@ extension CameraView.Coordinator {
                 try device.lockForConfiguration()
                 device.focusPointOfInterest = convertedPoint
                 device.focusMode = .autoFocus
+
+                if device.isExposurePointOfInterestSupported && device.isExposureModeSupported(.autoExpose) {
+                    device.exposurePointOfInterest = convertedPoint
+                    device.exposureMode = .autoExpose
+                }
+
                 device.unlockForConfiguration()
 
                 // Optionally, show a focus indicator
@@ -333,37 +346,94 @@ extension CameraView.Coordinator {
         }
     }
 
-    private func showFocusIndicator(at point: CGPoint, in view: UIView?) {
-        guard let view = view else { return }
+   
+   private func showFocusIndicator(at point: CGPoint, in view: UIView?) {
+    guard let view = view else { return }
 
-        // Remove any existing indicators
-        view.layer.sublayers?.filter { $0.name == "focusIndicator" }.forEach { $0.removeFromSuperlayer() }
+    // Remove existing indicators
+    view.layer.sublayers?.filter { $0.name == "focusIndicator" }.forEach { $0.removeFromSuperlayer() }
 
-        let indicatorLayer = CAShapeLayer()
-        indicatorLayer.name = "focusIndicator"
-        let indicatorSize: CGFloat = 75
-        let indicatorRect = CGRect(x: point.x - indicatorSize / 2, y: point.y - indicatorSize / 2, width: indicatorSize, height: indicatorSize)
-        
-        indicatorLayer.path = UIBezierPath(ovalIn: indicatorRect).cgPath
-        indicatorLayer.fillColor = UIColor.clear.cgColor
-        indicatorLayer.strokeColor = UIColor.yellow.cgColor
-        indicatorLayer.lineWidth = 2
-        view.layer.addSublayer(indicatorLayer)
+    let indicatorLayer = CAShapeLayer()
+    indicatorLayer.name = "focusIndicator"
+    let indicatorSize: CGFloat = 35
+    let indicatorRect = CGRect(
+        x: point.x - indicatorSize / 2,
+        y: point.y - indicatorSize / 2,
+        width: indicatorSize,
+        height: indicatorSize
+    )
+    indicatorLayer.path = UIBezierPath(ovalIn: indicatorRect).cgPath
+    indicatorLayer.fillColor = UIColor.clear.cgColor
+    indicatorLayer.strokeColor = UIColor.white.cgColor
+    indicatorLayer.lineWidth = 2
+    indicatorLayer.opacity = 0.0
+    view.layer.addSublayer(indicatorLayer)
 
-        let fadeOut = CABasicAnimation(keyPath: "opacity")
-        fadeOut.fromValue = 1.0
-        fadeOut.toValue = 0.0
-        fadeOut.duration = 0.5
-        fadeOut.beginTime = CACurrentMediaTime() + 0.8
-        fadeOut.fillMode = .forwards
-        fadeOut.isRemovedOnCompletion = false
+    // Fade-in
+    let fadeIn = CABasicAnimation(keyPath: "opacity")
+    fadeIn.fromValue = 0
+    fadeIn.toValue = 1
+    fadeIn.duration = 0.3
 
-        indicatorLayer.add(fadeOut, forKey: "fadeOut")
+    // Scale-in path (105% → 100%)
+    let scaleInPath = CABasicAnimation(keyPath: "path")
+    scaleInPath.fromValue = UIBezierPath(
+        ovalIn: indicatorRect.insetBy(dx: indicatorSize*0.05, dy: indicatorSize*0.05) // slightly bigger
+    ).cgPath
+    scaleInPath.toValue = UIBezierPath(ovalIn: indicatorRect).cgPath
+    scaleInPath.duration = 0.3
+    scaleInPath.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
-            indicatorLayer.removeFromSuperlayer()
-        }
+    let appearGroup = CAAnimationGroup()
+    appearGroup.animations = [fadeIn, scaleInPath]
+    appearGroup.duration = 0.3
+    appearGroup.beginTime = 0
+
+    // Pulse
+    let pulse = CABasicAnimation(keyPath: "opacity")
+    pulse.fromValue = 1
+    pulse.toValue = 0.4
+    pulse.duration = 0.1
+    pulse.autoreverses = true
+    pulse.repeatCount = 2
+    pulse.beginTime = appearGroup.beginTime + appearGroup.duration
+
+    // Fade-out
+    let fadeOut = CABasicAnimation(keyPath: "opacity")
+    fadeOut.fromValue = 1
+    fadeOut.toValue = 0
+    fadeOut.duration = 0.5
+
+    // Scale-out path (100% → 96%)
+    let scaleOutPath = CABasicAnimation(keyPath: "path")
+    scaleOutPath.fromValue = UIBezierPath(ovalIn: indicatorRect).cgPath
+    scaleOutPath.toValue = UIBezierPath(
+        ovalIn: indicatorRect.insetBy(dx: indicatorSize*0.05, dy: indicatorSize*0.05) // slightly smaller
+    ).cgPath
+    scaleOutPath.duration = 0.3
+    scaleOutPath.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+
+    let disappearGroup = CAAnimationGroup()
+    disappearGroup.animations = [fadeOut, scaleOutPath]
+    disappearGroup.duration = 0.2
+    disappearGroup.beginTime = pulse.beginTime + (pulse.duration * Double(pulse.repeatCount) * 2.0)
+
+    // Master group
+    let masterGroup = CAAnimationGroup()
+    masterGroup.animations = [appearGroup, pulse, disappearGroup]
+    masterGroup.duration = disappearGroup.beginTime + disappearGroup.duration
+    masterGroup.fillMode = .forwards
+    masterGroup.isRemovedOnCompletion = false
+
+    indicatorLayer.add(masterGroup, forKey: "focusAnimation")
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + masterGroup.duration) {
+        indicatorLayer.removeFromSuperlayer()
     }
+}
+
+
+
     
     @objc func toggleFlash(_ notification: Notification) {
         guard let isFlashOn = notification.object as? Bool,
