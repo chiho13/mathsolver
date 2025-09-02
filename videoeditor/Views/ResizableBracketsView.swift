@@ -20,6 +20,13 @@ struct ResizableBracketsView: View {
     
     @State private var activeCorner: CornerPosition?
     
+    private var crosshairOpacity: Double {
+        if isResizingDisabled {
+            return 0.5
+        }
+        return activeCorner == nil ? 1.0 : 0.0
+    }
+    
     var body: some View {
         ZStack {
             // Styled corner brackets with rounded corners and line caps
@@ -44,8 +51,8 @@ struct ResizableBracketsView: View {
                 path.addLine(to: CGPoint(x: center.x, y: center.y + crosshairSize / 2))
             }
             .stroke(Color.white, lineWidth: 1)
-            .opacity(activeCorner == nil ? 1 : 0)
-            .animation(.easeInOut(duration: 0.2), value: activeCorner)
+            .opacity(crosshairOpacity)
+            .animation(.easeInOut(duration: 0.2), value: crosshairOpacity)
             
         }
         .contentShape(Rectangle())

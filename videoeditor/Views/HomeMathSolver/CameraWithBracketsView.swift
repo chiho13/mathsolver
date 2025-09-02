@@ -10,6 +10,7 @@ import SwiftUI
 struct CameraWithBracketsView: View {
     @Binding var capturedImage: UIImage?
     @ObservedObject var viewModel: VisionViewModel
+    @Binding var triggerCapture: Bool
     @State private var showDotsView: Bool = false
     @State private var captureRect: CGRect = {
         let screenBounds = UIScreen.main.bounds
@@ -31,7 +32,7 @@ struct CameraWithBracketsView: View {
     var body: some View {
         ZStack {
             // Camera view with overlay
-            CameraView(capturedImage: $capturedImage, captureRect: $captureRect, viewModel: viewModel)
+            CameraView(capturedImage: $capturedImage, captureRect: $captureRect, viewModel: viewModel, triggerCapture: $triggerCapture)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea(.all)
                 .id(viewModel.isAnimatingCroppedArea) // Force update when animation state changes
@@ -69,12 +70,17 @@ struct CameraWithBracketsView: View {
 struct PulsingDotsView: View {
     let captureRect: CGRect
     @ObservedObject var viewModel: VisionViewModel
+    // Animation state
     @State private var dotPositions: [CGPoint] = []
+    @State private var dotScales: [CGFloat] = []
     @State private var animationPhases: [Double] = []
+    @State private var waveDriver: Double = 0.0
+    
+    // Scan line state
     @State private var scanLineOffset: CGFloat = 0
+    @State private var scanLineOpacity: Double = 1.0
     @State private var showScanLine: Bool = true
     @State private var showDots: Bool = false
-    @State private var dotScale: CGFloat = 0.0
     
     @State private var numberOfDots: Int = 12
     private let dotDensity: CGFloat = 0.00025
@@ -82,17 +88,16 @@ struct PulsingDotsView: View {
     
     var body: some View {
         ZStack {
-            // Vertical scanning line
+            // Vertical scanning line that fades as it moves
             if showScanLine {
                 Rectangle()
                     .fill(Color.white)
-                     .opacity(0.9)
+                    .opacity(scanLineOpacity)
                     .frame(width: 4, height: captureRect.height)
                     .position(
                         x: captureRect.origin.x + scanLineOffset,
                         y: captureRect.origin.y + captureRect.height / 2
                     )
-                    .animation(.linear(duration: 0.3), value: scanLineOffset)
             }
             
             // Pulsing dots (shown after scan line completes)
@@ -103,7 +108,7 @@ struct PulsingDotsView: View {
                             .fill(Color.white)
                             .frame(width: dotSize, height: dotSize)
                             .opacity(0.9)
-                            .scaleEffect(dotScale * (1.0 + 0.3 * abs(sin(animationPhases[index]))))
+                            .scaleEffect(dotScales[index] * (1.0 + 0.3 * abs(sin(animationPhases[index]))))
                             .position(dotPositions[index])
                             .animation(.none, value: dotPositions[index]) // Don't animate position changes
                     }
@@ -122,7 +127,7 @@ struct PulsingDotsView: View {
         .onChange(of: viewModel.isAnimatingCroppedArea) { _, isAnimating in
             if !isAnimating {
                 withAnimation(.easeIn(duration: 0.3)) {
-                    dotScale = 0.0
+                    dotScales = Array(repeating: 0.0, count: numberOfDots)
                 }
             }
         }
@@ -174,9 +179,12 @@ struct PulsingDotsView: View {
         let spacingModifier = (heightFactor * 0.4) + 0.6 // Ranges from 0.6 to 1.0
 
         let minSpacing = sqrt(area / CGFloat(numberOfDots)) * 0.7 * spacingModifier
-        let maxAttempts = numberOfDots * 100 // Safety break for the loop
+        let maxAttempts = numberOfDots * 100
 
-        while newPositions.count < numberOfDots && attempts < maxAttempts {
+        // We will manually place the first and last dots, so generate N-2 random ones.
+        let randomDotsToGenerate = max(0, numberOfDots - 2)
+
+        while newPositions.count < randomDotsToGenerate && attempts < maxAttempts {
             let candidateX = CGFloat.random(in: usableRect.minX...usableRect.maxX)
             let candidateY = CGFloat.random(in: usableRect.minY...usableRect.maxY)
             let candidatePoint = CGPoint(x: candidateX, y: candidateY)
@@ -197,7 +205,14 @@ struct PulsingDotsView: View {
             attempts += 1
         }
         
-        // Fallback: If we couldn't place all dots with spacing, fill the rest randomly.
+        // Add the anchor dots for the start and end of the wave
+        if numberOfDots >= 2 {
+            let leftAnchor = CGPoint(x: usableRect.minX, y: usableRect.midY)
+            let rightAnchor = CGPoint(x: usableRect.maxX, y: usableRect.midY)
+            newPositions.append(leftAnchor)
+            newPositions.append(rightAnchor)
+        }
+        
         let remaining = numberOfDots - newPositions.count
         if remaining > 0 {
             for _ in 0..<remaining {
@@ -208,6 +223,7 @@ struct PulsingDotsView: View {
                 newPositions.append(randomPoint)
             }
         }
+        
         // --- End of New Algorithm ---
         
         dotPositions = newPositions
@@ -223,17 +239,18 @@ struct PulsingDotsView: View {
         showScanLine = true
         showDots = false
         scanLineOffset = 0
+        scanLineOpacity = 1.0
         
-        // Generate positions for dots (but don't show them yet)
         generateRandomPositions()
         
-        // Start scan line animation from left to right
+        // Start scan line animation: move left-to-right and fade out simultaneously
         withAnimation(.linear(duration: 0.3)) {
             scanLineOffset = captureRect.width
+            scanLineOpacity = 0.0
         }
         
-        // After scan line completes, hide it and show dots
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+        // After scan line animation completes, hide it and show dots
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             showScanLine = false
             showDots = true
             startDotLifecycleAnimation()
@@ -244,7 +261,8 @@ struct PulsingDotsView: View {
         showScanLine = true
         showDots = false
         scanLineOffset = 0
-        dotScale = 0.0
+        scanLineOpacity = 1.0
+        dotScales = Array(repeating: 0.0, count: numberOfDots)
         startScanLineAnimation()
     }
     
@@ -253,11 +271,11 @@ struct PulsingDotsView: View {
         generateRandomPositions()
         
         // Start with dots at scale 0
-        dotScale = 0.0
+        dotScales = Array(repeating: 0.0, count: numberOfDots)
         
         // Phase 1: Grow from 0 to 1.0 (appear)
         withAnimation(.easeOut(duration: 0.3)) {
-            dotScale = 1.0
+            dotScales = (0..<numberOfDots).map { _ in 1.0 }
         }
         
         // Start individual pulsing animations while dots are visible
@@ -280,7 +298,7 @@ struct PulsingDotsView: View {
                 }
                 
                 // Stop the timer when dots start disappearing
-                if dotScale < 0.5 {
+                if dotScales[index] < 0.5 {
                     timer.invalidate()
                 }
             }

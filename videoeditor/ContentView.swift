@@ -19,6 +19,7 @@ struct ContentView: View {
     @State private var showCropView: Bool = false
     @State private var isCaptureButtonPressed: Bool = false
     @State private var isTorchOn: Bool = false
+    @State private var triggerCapture: Bool = false
 
     // Predefined prompt for math solving
     private let mathPrompt = "Solve the math problem in the image"
@@ -41,7 +42,7 @@ struct ContentView: View {
                                 .cornerRadius(10)
                                 .padding()
                         } else {
-                            CameraWithBracketsView(capturedImage: $capturedImage, viewModel: viewModel)
+                            CameraWithBracketsView(capturedImage: $capturedImage, viewModel: viewModel, triggerCapture: $triggerCapture)
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .ignoresSafeArea(.all)
                         }
@@ -65,7 +66,7 @@ struct ContentView: View {
 
 
                     if viewModel.isLoading {
-                        ProgressView("Solving...")
+                        GradientSpinner()
                     .padding()
                     }
 
@@ -206,6 +207,9 @@ struct ContentView: View {
                                                     .frame(width: 70, height: 70)
                                                 
                                                 // Inner solid circle (shrinks on press)
+                                                if viewModel.isAnimatingCroppedArea {
+                                                    GradientSpinner()
+                                                } else {
                                                 ZStack {
                                                     Circle()
                                                         .fill(Color.white)
@@ -218,10 +222,17 @@ struct ContentView: View {
                                                 }
                                                 .scaleEffect(isCaptureButtonPressed ? 0.93 : 1.0)
                                                 .animation(.easeInOut(duration: 0.2), value: isCaptureButtonPressed)
+                                                }
                                             }
                                             .onTapGesture {
                                                 // Trigger capture in CameraView
-                                                NotificationCenter.default.post(name: NSNotification.Name("CapturePhoto"), object: nil)
+                                                if viewModel.isAnimatingCroppedArea {
+                                                    viewModel.isAnimatingCroppedArea = false
+                                                } else {
+                                                    viewModel.isAnimatingCroppedArea = true
+                                                    // Auto-stop after 3 seconds for demo
+                                                    triggerCapture = true
+                                                }
                                             }
                                             .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
                                                 isCaptureButtonPressed = pressing
@@ -247,6 +258,7 @@ struct ContentView: View {
                                         .padding(.bottom, 20) // Add bottom padding for safe area
                                         
                                         // Test animation button (only show when camera is active)
+                                       
                                         Button(action: {
                                             if viewModel.isAnimatingCroppedArea {
                                                 viewModel.isAnimatingCroppedArea = false
@@ -273,48 +285,48 @@ struct ContentView: View {
                                 }
                 
                 // Buttons overlay - always on top of gradient
-                if let image = capturedImage {
-                    VStack {
-                        Spacer()
-                        VStack(spacing: 16) {
-                            Button(action: {
-                                Task {
-                                    viewModel.selectedImage = image
-                                    await viewModel.solveMathProblem()
-                                }
-                            }) {
-                                if viewModel.isLoading {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                        .frame(height: 20)
-                                } else {
-                                    Text("Solve Math Problem")
-                                        .font(.headline)
-                                        .padding()
-                                        .frame(maxWidth: .infinity)
-                                }
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(viewModel.isLoading)
+                // if let image = capturedImage {
+                //     VStack {
+                //         Spacer()
+                //         VStack(spacing: 16) {
+                //             Button(action: {
+                //                 Task {
+                //                     viewModel.selectedImage = image
+                //                     await viewModel.solveMathProblem()
+                //                 }
+                //             }) {
+                //                 if viewModel.isLoading {
+                //                     ProgressView()
+                //                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                //                         .frame(height: 20)
+                //                 } else {
+                //                     Text("Solve Math Problem")
+                //                         .font(.headline)
+                //                         .padding()
+                //                         .frame(maxWidth: .infinity)
+                //                 }
+                //             }
+                //             .buttonStyle(.borderedProminent)
+                //             .disabled(viewModel.isLoading)
                             
-                            // Button to retake photo
-                            Button(action: {
-                                capturedImage = nil
-                                viewModel.visionResponse = ""
-                                viewModel.errorMessage = nil
-                            }) {
-                                Text("Retake Photo")
-                                    .font(.headline)
-                                    .padding()
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom, 50) // Safe area padding
-                    }
-                    .ignoresSafeArea(.all)
-                }
+                //             // Button to retake photo
+                //             Button(action: {
+                //                 capturedImage = nil
+                //                 viewModel.visionResponse = ""
+                //                 viewModel.errorMessage = nil
+                //             }) {
+                //                 Text("Retake Photo")
+                //                     .font(.headline)
+                //                     .padding()
+                //                     .frame(maxWidth: .infinity)
+                //             }
+                //             .buttonStyle(.bordered)
+                //         }
+                //         .padding(.horizontal)
+                //         .padding(.bottom, 50) // Safe area padding
+                //     }
+                //     .ignoresSafeArea(.all)
+                // }
             }
             .onAppear {
                 checkCameraAuthorization()

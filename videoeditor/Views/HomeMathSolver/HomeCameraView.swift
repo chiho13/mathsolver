@@ -17,6 +17,7 @@ struct CameraView: UIViewControllerRepresentable {
     @Binding var capturedImage: UIImage?
     @Binding var captureRect: CGRect
     @ObservedObject var viewModel: VisionViewModel
+    @Binding var triggerCapture: Bool
     
     class Coordinator: NSObject, AVCapturePhotoCaptureDelegate {
         var parent: CameraView
@@ -27,14 +28,6 @@ struct CameraView: UIViewControllerRepresentable {
         init(parent: CameraView) {
             self.parent = parent
             super.init()
-            
-            // Listen for capture photo notification
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(capturePhoto),
-                name: NSNotification.Name("CapturePhoto"),
-                object: nil
-            )
             
             // Listen for flash toggle notification
             NotificationCenter.default.addObserver(
@@ -56,6 +49,7 @@ struct CameraView: UIViewControllerRepresentable {
                     guard let previewLayer = self.previewLayer else {
             DispatchQueue.main.async {
                 self.parent.capturedImage = image
+                self.parent.viewModel.isAnimatingCroppedArea = false
             }
             return
         }
@@ -66,6 +60,7 @@ struct CameraView: UIViewControllerRepresentable {
 
             DispatchQueue.main.async {
                 self.parent.capturedImage = croppedImage ?? image
+                self.parent.viewModel.isAnimatingCroppedArea = false
             }
         }
 
@@ -139,12 +134,25 @@ struct CameraView: UIViewControllerRepresentable {
         overlayView.tag = 999 // Tag to identify this view for updates
         maskLayer.name = "captureMask"
         
+        // Add gesture recognizers for zoom and focus
+        let pinchGesture = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handlePinchGesture(_:)))
+        viewController.view.addGestureRecognizer(pinchGesture)
+        
+        let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleTapGesture(_:)))
+        viewController.view.addGestureRecognizer(tapGesture)
+        
         // Note: Capture button is now handled by SwiftUI overlay
         
         return viewController
     }
     
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        if triggerCapture {
+            context.coordinator.capturePhoto()
+            DispatchQueue.main.async {
+                self.triggerCapture = false
+            }
+        }
         // Update the overlay mask when captureRect changes
         if let overlayView = uiViewController.view.subviews.first(where: { $0.tag == 999 }),
            let maskLayer = overlayView.layer.mask as? CAShapeLayer {
@@ -281,6 +289,80 @@ extension CameraView.Coordinator {
     @objc func capturePhoto() {
         let settings = AVCapturePhotoSettings()
         photoOutput?.capturePhoto(with: settings, delegate: self)
+    }
+
+    @objc func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
+        guard let device = captureDevice else { return }
+
+        if gesture.state == .changed {
+            let maxZoomFactor = device.activeFormat.videoMaxZoomFactor
+            let pinchVelocityDividerFactor: CGFloat = 10.0 // Slower zoom
+
+            do {
+                try device.lockForConfiguration()
+                defer { device.unlockForConfiguration() }
+
+                let desiredZoomFactor = device.videoZoomFactor + atan2(gesture.velocity, pinchVelocityDividerFactor)
+                device.videoZoomFactor = max(1.0, min(desiredZoomFactor, maxZoomFactor))
+
+            } catch {
+                print("Error locking device for configuration: \(error)")
+            }
+        }
+    }
+
+    @objc func handleTapGesture(_ gesture: UITapGestureRecognizer) {
+        guard let device = captureDevice, let previewLayer = self.previewLayer else { return }
+
+        let touchPoint = gesture.location(in: gesture.view)
+        let convertedPoint = previewLayer.captureDevicePointConverted(fromLayerPoint: touchPoint)
+
+        if device.isFocusPointOfInterestSupported && device.isFocusModeSupported(.autoFocus) {
+            do {
+                try device.lockForConfiguration()
+                device.focusPointOfInterest = convertedPoint
+                device.focusMode = .autoFocus
+                device.unlockForConfiguration()
+
+                // Optionally, show a focus indicator
+                showFocusIndicator(at: touchPoint, in: gesture.view)
+
+            } catch {
+                print("Error setting focus point: \(error)")
+            }
+        }
+    }
+
+    private func showFocusIndicator(at point: CGPoint, in view: UIView?) {
+        guard let view = view else { return }
+
+        // Remove any existing indicators
+        view.layer.sublayers?.filter { $0.name == "focusIndicator" }.forEach { $0.removeFromSuperlayer() }
+
+        let indicatorLayer = CAShapeLayer()
+        indicatorLayer.name = "focusIndicator"
+        let indicatorSize: CGFloat = 75
+        let indicatorRect = CGRect(x: point.x - indicatorSize / 2, y: point.y - indicatorSize / 2, width: indicatorSize, height: indicatorSize)
+        
+        indicatorLayer.path = UIBezierPath(ovalIn: indicatorRect).cgPath
+        indicatorLayer.fillColor = UIColor.clear.cgColor
+        indicatorLayer.strokeColor = UIColor.yellow.cgColor
+        indicatorLayer.lineWidth = 2
+        view.layer.addSublayer(indicatorLayer)
+
+        let fadeOut = CABasicAnimation(keyPath: "opacity")
+        fadeOut.fromValue = 1.0
+        fadeOut.toValue = 0.0
+        fadeOut.duration = 0.5
+        fadeOut.beginTime = CACurrentMediaTime() + 0.8
+        fadeOut.fillMode = .forwards
+        fadeOut.isRemovedOnCompletion = false
+
+        indicatorLayer.add(fadeOut, forKey: "fadeOut")
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+            indicatorLayer.removeFromSuperlayer()
+        }
     }
     
     @objc func toggleFlash(_ notification: Notification) {
