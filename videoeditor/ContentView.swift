@@ -18,7 +18,7 @@ struct ContentView: View {
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var selectedPhotoImage: UIImage? = nil
     @State private var showCropView: Bool = false
-    @State private var isCaptureButtonPressed: Bool = false
+    @State private var  isCaptureButtonPressed: Bool = false
     @State private var isTorchOn: Bool = false
     @State private var triggerCapture: Bool = false
     @State private var showSolutionSheet: Bool = false
@@ -38,6 +38,7 @@ struct ContentView: View {
         
         return CGRect(x: rectX, y: rectY, width: rectWidth, height: rectHeight)
     }()
+    @State private var freezeImage: UIImage? = nil
 
     // Predefined prompt for math solving
     private let mathPrompt = "Solve the math problem in the image"
@@ -53,21 +54,39 @@ struct ContentView: View {
                 
                 VStack(spacing: 20) {
                     if isCameraAuthorized {
-                        if let image = originalImage {
-                            CapturedImageWithBracketView(
-                                image: image,
-                                captureRect: $captureRect,
-                                isAnimatingCroppedArea: viewModel.isAnimatingCroppedArea
-                            )
-                               .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .ignoresSafeArea(.all)
-                                .transition(.identity)
-                        } else {
-                            CameraWithBracketsView(capturedImage: $croppedImage, originalImage: $originalImage, viewModel: viewModel, triggerCapture: $triggerCapture, captureRect: $captureRect)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .ignoresSafeArea(.all)
-                                .transition(.identity)
-                        }
+
+                //         if let image = freezeImage {
+                //             CapturedImageWithBracketView(
+                //                 image: image,
+                //                 captureRect: $captureRect,
+                //                 isAnimatingCroppedArea: viewModel.isAnimatingCroppedArea
+                //             )
+                //                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                //                 .ignoresSafeArea(.all)
+                //                 .transition(.identity)
+
+                //                 Rectangle()
+                // .stroke(Color.red, lineWidth: 2)
+                // .frame(width: captureRect.width, height: captureRect.height)
+                // .position(x: captureRect.midX, y: captureRect.midY)
+                //         } else {
+                //             ZStack {
+                //                 CameraWithBracketsView(capturedImage: $croppedImage, originalImage: $originalImage, viewModel: viewModel, triggerCapture: $triggerCapture, captureRect: $captureRect, freezeImage: $freezeImage)
+                //                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                //                     .ignoresSafeArea(.all)
+                //                     .transition(.identity)
+                              
+                //             }
+                //         }
+
+                ZStack {
+                                CameraWithBracketsView(capturedImage: $croppedImage, originalImage: $originalImage, viewModel: viewModel, triggerCapture: $triggerCapture, captureRect: $captureRect, freezeImage: $freezeImage)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .ignoresSafeArea(.all)
+                                    .transition(.identity)
+                              
+                            }
+                            
                     } else {
                         VStack {
                             Image(systemName: "camera.fill")
@@ -282,25 +301,23 @@ struct ContentView: View {
             }
             .onChange(of: viewModel.visionResponse) { _, newResponse in
                 if !newResponse.isEmpty {
-                    // Wait 1s for animation before showing sheet and ending animation
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        viewModel.isAnimatingCroppedArea = false
-                        showSolutionSheet = true
-                    }
+                    // Start solution sheet and stop animation
+                    showSolutionSheet = true
+                    viewModel.isAnimatingCroppedArea = false
                 }
             }
             .onChange(of: viewModel.errorMessage) { _, newError in
                 if newError != nil {
-                    // Wait 1s for animation before showing sheet and ending animation
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        viewModel.isAnimatingCroppedArea = false
-                        showSolutionSheet = true
-                    }
+                    // Start solution sheet and stop animation
+                    showSolutionSheet = true
+                    viewModel.isAnimatingCroppedArea = false
                 }
             }
             .sheet(isPresented: $showSolutionSheet, onDismiss: {
+                // All state cleanup now happens here, when the user is truly done
                 originalImage = nil
                 croppedImage = nil
+                freezeImage = nil
                 viewModel.visionResponse = ""
                 viewModel.errorMessage = nil
             }) {

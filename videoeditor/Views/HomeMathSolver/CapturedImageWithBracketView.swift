@@ -8,9 +8,10 @@ struct CapturedImageWithBracketView: View {
 
     var body: some View {
         ZStack {
-            Image(uiImage: image)
+           Image(uiImage: image)
                 .resizable()
                 .aspectRatio(contentMode: .fill)
+                .clipped()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .ignoresSafeArea(.all)
                 .clipped()

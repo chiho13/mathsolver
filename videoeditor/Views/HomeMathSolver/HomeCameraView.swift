@@ -1,8 +1,8 @@
 //
-//  HomeCameraView.swift
+//  AdvancedCameraView.swift
 //  videoeditor
 //
-//  Created by Anthony Ho on 31/08/2025.
+//  Created by Gemini on 07/07/2024.
 //
 
 import SwiftUI
@@ -12,29 +12,28 @@ import PhotosUI
 import UniformTypeIdentifiers
 import AVFoundation
 
-
-
 struct CameraView: UIViewControllerRepresentable {
     @Binding var capturedImage: UIImage?
     @Binding var originalImage: UIImage?
     @Binding var captureRect: CGRect
     @ObservedObject var viewModel: VisionViewModel
     @Binding var triggerCapture: Bool
+    @Binding var freezeImage: UIImage?
     
-    class Coordinator: NSObject, AVCapturePhotoCaptureDelegate {
+    class Coordinator: NSObject {
         var parent: CameraView
         var photoOutput: AVCapturePhotoOutput?
         var previewLayer: AVCaptureVideoPreviewLayer?
+        var captureSession: AVCaptureSession?
         var captureDevice: AVCaptureDevice?
         var initialZoomFactor: CGFloat = 1.0
-        var currentZoomFactor: CGFloat = 1.0 // Tracks the actual current zoom factor
-        var snapshotView: UIImageView? // To display frozen preview
+        var currentZoomFactor: CGFloat = 1.0
+        var snapshotView: UIImageView?
+        var viewControllerView: UIView?
         
         init(parent: CameraView) {
             self.parent = parent
             super.init()
-            
-            // Listen for flash toggle notification
             NotificationCenter.default.addObserver(
                 self,
                 selector: #selector(toggleFlash(_:)),
@@ -45,68 +44,11 @@ struct CameraView: UIViewControllerRepresentable {
         
         deinit {
             NotificationCenter.default.removeObserver(self)
-        }
-        
-        func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-            guard let imageData = photo.fileDataRepresentation(),
-                  let image = UIImage(data: imageData) else { return }
-
-            if self.previewLayer == nil {
-                DispatchQueue.main.async {
-                    let zoomedImage = self.parent.cropForZoom(image, zoomFactor: self.currentZoomFactor)
-                    self.parent.originalImage = zoomedImage ?? image
-                    self.parent.capturedImage = zoomedImage ?? image
-                    self.parent.viewModel.isAnimatingCroppedArea = false
-                }
-                return
+            // CRITICAL: Stop the capture session when the coordinator is deallocated
+            if let session = captureSession, session.isRunning {
+                session.stopRunning()
+                print("AVCaptureSession stopped.")
             }
-
-            let captureRect = self.parent.captureRect
-            let metadataOutputRect = previewLayer!.metadataOutputRectConverted(fromLayerRect: captureRect)
-            let croppedImage = self.cropImage(image, to: metadataOutputRect)
-
-            DispatchQueue.main.async {
-                self.parent.originalImage = image
-                self.parent.capturedImage = croppedImage ?? image
-                self.parent.viewModel.isAnimatingShutter = false
-                self.parent.viewModel.isAnimatingCroppedArea = true
-            }
-            
-            // Reapply zoom after capture
-            reapplyZoomFactor()
-        }
-
-        private func reapplyZoomFactor() {
-            guard let device = captureDevice else { return }
-            do {
-                try device.lockForConfiguration()
-                defer { device.unlockForConfiguration() }
-                let maxZoomFactor = device.activeFormat.videoMaxZoomFactor
-                device.videoZoomFactor = max(1.0, min(currentZoomFactor, maxZoomFactor))
-                print("Reapplied zoom factor: \(currentZoomFactor)")
-            } catch {
-                print("Error reapplying zoom factor: \(error)")
-            }
-        }
-
-        private func cropImage(_ image: UIImage, to rect: CGRect) -> UIImage? {
-            guard let cgImage = image.cgImage else { return nil }
-
-            let imageWidth = CGFloat(cgImage.width)
-            let imageHeight = CGFloat(cgImage.height)
-
-            let cropRect = CGRect(
-                x: rect.origin.x * imageWidth,
-                y: rect.origin.y * imageHeight,
-                width: rect.size.width * imageWidth,
-                height: rect.size.height * imageHeight
-            )
-
-            if let croppedCGImage = cgImage.cropping(to: cropRect) {
-                return UIImage(cgImage: croppedCGImage, scale: image.scale, orientation: image.imageOrientation)
-            }
-
-            return nil
         }
     }
     
@@ -114,35 +56,40 @@ struct CameraView: UIViewControllerRepresentable {
         Coordinator(parent: self)
     }
     
-    func makeUIViewController(context: Context) -> UIViewController {
+    func makeUIViewController(context: UIViewControllerRepresentableContext<CameraView>) -> UIViewController {
         let viewController = UIViewController()
+        context.coordinator.viewControllerView = viewController.view
+        
+        // This is the session you must keep a reference to
         let session = AVCaptureSession()
         session.sessionPreset = .photo
         
         guard let device = AVCaptureDevice.default(for: .video),
               let input = try? AVCaptureDeviceInput(device: device) else {
+            DispatchQueue.main.async {
+                self.viewModel.errorMessage = "Failed to access camera. Please check your device settings."
+            }
             return viewController
         }
         
-        context.coordinator.captureDevice = device
-        context.coordinator.currentZoomFactor = device.videoZoomFactor // Initialize currentZoomFactor
+        // CRITICAL: Store the session in the coordinator
+        context.coordinator.captureSession = session
         
-        // Apply currentZoomFactor to ensure zoom persists across view updates
-        do {
-            try device.lockForConfiguration()
-            defer { device.unlockForConfiguration() }
-            let maxZoomFactor = device.activeFormat.videoMaxZoomFactor
-            device.videoZoomFactor = max(1.0, min(context.coordinator.currentZoomFactor, maxZoomFactor))
-            print("Applied zoom factor on setup: \(context.coordinator.currentZoomFactor)")
-        } catch {
-            print("Error applying zoom factor on setup: \(error)")
-        }
+        context.coordinator.captureDevice = device
         
         let output = AVCapturePhotoOutput()
         context.coordinator.photoOutput = output
-        session.addInput(input)
-        session.addOutput(output)
-        session.startRunning()
+        
+        if session.canAddInput(input) {
+            session.addInput(input)
+        }
+        if session.canAddOutput(output) {
+            session.addOutput(output)
+        }
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            session.startRunning()
+        }
         
         let previewLayer = AVCaptureVideoPreviewLayer(session: session)
         previewLayer.videoGravity = .resizeAspectFill
@@ -151,11 +98,10 @@ struct CameraView: UIViewControllerRepresentable {
         
         viewController.view.layer.addSublayer(previewLayer)
         
-        // Add rectangular overlay with fade effect
+        // Setup the overlay for the capture rect
         let overlayView = UIView(frame: viewController.view.bounds)
         overlayView.backgroundColor = UIColor.black.withAlphaComponent(0.6)
         
-        // Create mask for the capture area (will be updated dynamically)
         let cornerRadius: CGFloat = 8.0
         let path = UIBezierPath(roundedRect: captureRect, cornerRadius: cornerRadius)
         let maskLayer = CAShapeLayer()
@@ -166,98 +112,114 @@ struct CameraView: UIViewControllerRepresentable {
         overlayView.layer.mask = maskLayer
         
         viewController.view.addSubview(overlayView)
-        
-        // Store reference to overlay and mask for dynamic updates
-        overlayView.tag = 999 // Tag to identify this view for updates
+        overlayView.tag = 999
         maskLayer.name = "captureMask"
         
-        // Add gesture recognizers for zoom and focus
+        // Setup the snapshot view for freezing the camera view
+        let snapshotView = UIImageView(frame: viewController.view.bounds)
+        snapshotView.contentMode = .scaleAspectFill
+        snapshotView.clipsToBounds = true
+        snapshotView.isHidden = true
+        viewController.view.addSubview(snapshotView)
+        context.coordinator.snapshotView = snapshotView
+        
         let pinchGesture = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handlePinchGesture(_:)))
         viewController.view.addGestureRecognizer(pinchGesture)
         
         let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleTapGesture(_:)))
         viewController.view.addGestureRecognizer(tapGesture)
         
-        // Note: Capture button is now handled by SwiftUI overlay
-        
         return viewController
     }
     
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+    func updateUIViewController(_ uiViewController: UIViewController, context: UIViewControllerRepresentableContext<CameraView>) {
         if triggerCapture {
             context.coordinator.capturePhoto()
             DispatchQueue.main.async {
                 self.triggerCapture = false
             }
         }
-        // Update the overlay mask when captureRect changes
+        
+        // Update the capture rect overlay
         if let overlayView = uiViewController.view.subviews.first(where: { $0.tag == 999 }),
            let maskLayer = overlayView.layer.mask as? CAShapeLayer {
-            
-            // Use the overlay view bounds to ensure proper masking
             let overlayBounds = overlayView.bounds
             let cornerRadius: CGFloat = 8.0
             
-            // Create the cutout path - this creates the clear window
             let cutoutPath = UIBezierPath(roundedRect: captureRect, cornerRadius: cornerRadius)
-            
-            // Create the full overlay path
             let fullPath = UIBezierPath(rect: overlayBounds)
             fullPath.append(cutoutPath)
             
-            // Use even-odd fill rule to create the cutout effect
             CATransaction.begin()
-            CATransaction.setDisableActions(true) // Disable implicit animations to prevent layout issues
+            CATransaction.setDisableActions(true)
             maskLayer.path = fullPath.cgPath
             maskLayer.fillRule = .evenOdd
             CATransaction.commit()
+        }
+        
+        // This is the core logic for freezing the image.
+        // We use the `freezeImage` binding to control the state of the camera view.
+        if let freezeImage = freezeImage {
+            context.coordinator.snapshotView?.image = freezeImage
+            context.coordinator.snapshotView?.isHidden = false
+            context.coordinator.previewLayer?.isHidden = true
+        } else {
+            context.coordinator.snapshotView?.isHidden = true
+            context.coordinator.previewLayer?.isHidden = false
+        }
+        
+        // Update the frame of the preview layer to match the view controller's view
+        uiViewController.view.frame = UIScreen.main.bounds
+        context.coordinator.previewLayer?.frame = uiViewController.view.bounds
+    }
+}
+
+// MARK: - AVCapturePhotoCaptureDelegate
+extension CameraView.Coordinator: AVCapturePhotoCaptureDelegate {
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        guard let imageData = photo.fileDataRepresentation(),
+              let image = UIImage(data: imageData) else {
+            DispatchQueue.main.async {
+                self.parent.viewModel.isAnimatingShutter = false
+            }
+            return
+        }
+        
+        // Add haptic feedback for a successful capture
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+        
+        let captureRect = self.parent.captureRect
+        
+        // Convert the on-screen capture rect to the photo's coordinate space
+        let metadataOutputRect = previewLayer?.metadataOutputRectConverted(fromLayerRect: captureRect) ?? .zero
+        let croppedImage = self.cropImage(image, to: metadataOutputRect)
+        
+        // Set the frozen image to the full, uncropped image
+        let frozenImage = image
+        
+        DispatchQueue.main.async {
+            self.parent.freezeImage = frozenImage
+            self.parent.originalImage = image
+            self.parent.capturedImage = croppedImage ?? image
             
-            // Animation is now handled in SwiftUI layer above this view
+            self.parent.viewModel.isAnimatingShutter = false
+            self.parent.viewModel.isAnimatingCroppedArea = true
         }
-    }
-    
-    
-    
-    private func cropForZoom(_ image: UIImage, zoomFactor: CGFloat) -> UIImage? {
-        guard let cgImage = image.cgImage else { return nil }
-
-        let width = CGFloat(cgImage.width)
-        let height = CGFloat(cgImage.height)
-
-        // Calculate crop rect centered
-        let cropWidth = width / zoomFactor
-        let cropHeight = height / zoomFactor
-        let originX = (width - cropWidth) / 2
-        let originY = (height - cropHeight) / 2
-
-        let cropRect = CGRect(x: originX, y: originY, width: cropWidth, height: cropHeight)
-
-        if let croppedCGImage = cgImage.cropping(to: cropRect) {
-            return UIImage(cgImage: croppedCGImage, scale: image.scale, orientation: image.imageOrientation)
-        }
-        return nil
+        
+        reapplyZoomFactor()
     }
 }
 
-
-protocol CameraViewControllerDelegate: AnyObject {
-    func didCaptureImage(_ image: UIImage)
-    func didFailWithError(_ error: Error)
-}
-
+// MARK: - Gesture Handling
 extension CameraView.Coordinator {
-    @objc func capturePhoto() {
-        let settings = AVCapturePhotoSettings()
-        photoOutput?.capturePhoto(with: settings, delegate: self)
-    }
-
     @objc func handlePinchGesture(_ gesture: UIPinchGestureRecognizer) {
         guard let device = captureDevice else { return }
-
+        
         if gesture.state == .began {
             initialZoomFactor = device.videoZoomFactor
         }
-
+        
         if gesture.state == .changed {
             let maxZoomFactor = device.activeFormat.videoMaxZoomFactor
             let desiredZoomFactor = initialZoomFactor * gesture.scale
@@ -265,49 +227,89 @@ extension CameraView.Coordinator {
             do {
                 try device.lockForConfiguration()
                 defer { device.unlockForConfiguration() }
-                
                 device.videoZoomFactor = max(1.0, min(desiredZoomFactor, maxZoomFactor))
-                currentZoomFactor = device.videoZoomFactor // Update currentZoomFactor
+                currentZoomFactor = device.videoZoomFactor
             } catch {
                 print("Error locking device for configuration: \(error)")
             }
         }
     }
-
+    
     @objc func handleTapGesture(_ gesture: UITapGestureRecognizer) {
         guard let device = captureDevice, let previewLayer = self.previewLayer else { return }
-
+        
         let touchPoint = gesture.location(in: gesture.view)
         let convertedPoint = previewLayer.captureDevicePointConverted(fromLayerPoint: touchPoint)
-
+        
         if device.isFocusPointOfInterestSupported && device.isFocusModeSupported(.autoFocus) {
             do {
                 try device.lockForConfiguration()
                 device.focusPointOfInterest = convertedPoint
                 device.focusMode = .autoFocus
-
+                
                 if device.isExposurePointOfInterestSupported && device.isExposureModeSupported(.autoExpose) {
                     device.exposurePointOfInterest = convertedPoint
                     device.exposureMode = .autoExpose
                 }
-
+                
                 device.unlockForConfiguration()
-
-                // Optionally, show a focus indicator
+                
+                // Add haptic feedback for focus
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                
                 showFocusIndicator(at: touchPoint, in: gesture.view)
-
             } catch {
                 print("Error setting focus point: \(error)")
             }
         }
     }
+}
 
+// MARK: - Helper Methods
+extension CameraView.Coordinator {
+    private func reapplyZoomFactor() {
+        guard let device = captureDevice else { return }
+        do {
+            try device.lockForConfiguration()
+            defer { device.unlockForConfiguration() }
+            let maxZoomFactor = device.activeFormat.videoMaxZoomFactor
+            device.videoZoomFactor = max(1.0, min(currentZoomFactor, maxZoomFactor))
+        } catch {
+            print("Error reapplying zoom factor: \(error)")
+        }
+    }
+    
+    private func cropImage(_ image: UIImage, to rect: CGRect) -> UIImage? {
+        guard let cgImage = image.cgImage else { return nil }
+        
+        let imageWidth = CGFloat(cgImage.width)
+        let imageHeight = CGFloat(cgImage.height)
+        
+        let cropRect = CGRect(
+            x: rect.origin.x * imageWidth,
+            y: rect.origin.y * imageHeight,
+            width: rect.size.width * imageWidth,
+            height: rect.size.height * imageHeight
+        )
+        
+        if let croppedCGImage = cgImage.cropping(to: cropRect) {
+            return UIImage(cgImage: croppedCGImage, scale: image.scale, orientation: image.imageOrientation)
+        }
+        
+        return nil
+    }
+    
+    @objc func capturePhoto() {
+        let settings = AVCapturePhotoSettings()
+        photoOutput?.capturePhoto(with: settings, delegate: self)
+    }
+    
     private func showFocusIndicator(at point: CGPoint, in view: UIView?) {
         guard let view = view else { return }
-
-        // Remove existing indicators
+        
         view.layer.sublayers?.filter { $0.name == "focusIndicator" }.forEach { $0.removeFromSuperlayer() }
-
+        
         let indicatorLayer = CAShapeLayer()
         indicatorLayer.name = "focusIndicator"
         let indicatorSize: CGFloat = 35
@@ -323,28 +325,25 @@ extension CameraView.Coordinator {
         indicatorLayer.lineWidth = 2
         indicatorLayer.opacity = 0.0
         view.layer.addSublayer(indicatorLayer)
-
-        // Fade-in
+        
         let fadeIn = CABasicAnimation(keyPath: "opacity")
         fadeIn.fromValue = 0
         fadeIn.toValue = 1
         fadeIn.duration = 0.3
-
-        // Scale-in path (105% → 100%)
+        
         let scaleInPath = CABasicAnimation(keyPath: "path")
         scaleInPath.fromValue = UIBezierPath(
-            ovalIn: indicatorRect.insetBy(dx: indicatorSize*0.05, dy: indicatorSize*0.05) // slightly bigger
+            ovalIn: indicatorRect.insetBy(dx: indicatorSize*0.05, dy: indicatorSize*0.05)
         ).cgPath
         scaleInPath.toValue = UIBezierPath(ovalIn: indicatorRect).cgPath
         scaleInPath.duration = 0.3
         scaleInPath.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-
+        
         let appearGroup = CAAnimationGroup()
         appearGroup.animations = [fadeIn, scaleInPath]
         appearGroup.duration = 0.3
         appearGroup.beginTime = 0
-
-        // Pulse
+        
         let pulse = CABasicAnimation(keyPath: "opacity")
         pulse.fromValue = 1
         pulse.toValue = 0.4
@@ -352,36 +351,33 @@ extension CameraView.Coordinator {
         pulse.autoreverses = true
         pulse.repeatCount = 2
         pulse.beginTime = appearGroup.beginTime + appearGroup.duration
-
-        // Fade-out
+        
         let fadeOut = CABasicAnimation(keyPath: "opacity")
         fadeOut.fromValue = 1
         fadeOut.toValue = 0
         fadeOut.duration = 0.5
-
-        // Scale-out path (100% → 96%)
+        
         let scaleOutPath = CABasicAnimation(keyPath: "path")
         scaleOutPath.fromValue = UIBezierPath(ovalIn: indicatorRect).cgPath
         scaleOutPath.toValue = UIBezierPath(
-            ovalIn: indicatorRect.insetBy(dx: indicatorSize*0.05, dy: indicatorSize*0.05) // slightly smaller
+            ovalIn: indicatorRect.insetBy(dx: indicatorSize*0.05, dy: indicatorSize*0.05)
         ).cgPath
         scaleOutPath.duration = 0.3
         scaleOutPath.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-
+        
         let disappearGroup = CAAnimationGroup()
         disappearGroup.animations = [fadeOut, scaleOutPath]
         disappearGroup.duration = 0.2
         disappearGroup.beginTime = pulse.beginTime + (pulse.duration * Double(pulse.repeatCount) * 2.0)
-
-        // Master group
+        
         let masterGroup = CAAnimationGroup()
         masterGroup.animations = [appearGroup, pulse, disappearGroup]
         masterGroup.duration = disappearGroup.beginTime + disappearGroup.duration
         masterGroup.fillMode = .forwards
         masterGroup.isRemovedOnCompletion = false
-
+        
         indicatorLayer.add(masterGroup, forKey: "focusAnimation")
-
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + masterGroup.duration) {
             indicatorLayer.removeFromSuperlayer()
         }
@@ -399,81 +395,5 @@ extension CameraView.Coordinator {
         } catch {
             print("Error toggling flash: \(error)")
         }
-    }
-}
-
-
-class CameraViewController: UIViewController {
-    weak var delegate: CameraViewControllerDelegate?
-    private var captureSession: AVCaptureSession?
-    private var photoOutput: AVCapturePhotoOutput?
-    private var previewLayer: AVCaptureVideoPreviewLayer?
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        setupCamera()
-        NotificationCenter.default.addObserver(self, selector: #selector(capturePhoto), name: NSNotification.Name("CapturePhoto"), object: nil)
-    }
-
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        captureSession?.stopRunning()
-        NotificationCenter.default.removeObserver(self, name: NSNotification.Name("CapturePhoto"), object: nil)
-    }
-
-    private func setupCamera() {
-        captureSession = AVCaptureSession()
-        captureSession?.sessionPreset = .photo
-
-        guard let captureDevice = AVCaptureDevice.default(for: .video),
-              let captureSession = captureSession else {
-            delegate?.didFailWithError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to set up camera"]))
-            return
-        }
-
-        do {
-            let input = try AVCaptureDeviceInput(device: captureDevice)
-            if captureSession.canAddInput(input) {
-                captureSession.addInput(input)
-            }
-
-            photoOutput = AVCapturePhotoOutput()
-            if captureSession.canAddOutput(photoOutput!) {
-                captureSession.addOutput(photoOutput!)
-            }
-
-            previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-            previewLayer?.videoGravity = .resizeAspectFill
-            previewLayer?.frame = view.bounds
-            if let previewLayer = previewLayer {
-                view.layer.addSublayer(previewLayer)
-            }
-
-            captureSession.startRunning()
-        } catch {
-            delegate?.didFailWithError(error)
-        }
-    }
-
-    @objc func capturePhoto() {
-        let settings = AVCapturePhotoSettings()
-        photoOutput?.capturePhoto(with: settings, delegate: self)
-    }
-}
-
-extension CameraViewController: AVCapturePhotoCaptureDelegate {
-    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        if let error = error {
-            delegate?.didFailWithError(error)
-            return
-        }
-        
-        guard let imageData = photo.fileDataRepresentation(),
-              let image = UIImage(data: imageData) else {
-            delegate?.didFailWithError(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to process captured image"]))
-            return
-        }
-
-        delegate?.didCaptureImage(image)
     }
 }
