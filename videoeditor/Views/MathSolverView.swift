@@ -36,15 +36,7 @@ struct MathSolverView: View {
                 .buttonStyle(.borderedProminent)
                 .padding(.bottom)
                 // Use .onChange to update the viewModel when selectedItem changes
-                .onChange(of: selectedItem) { newItem in
-                    Task {
-                        if let data = try? await newItem?.loadTransferable(type: Data.self) {
-                            if let uiImage = UIImage(data: data) {
-                                viewModel.selectedImage = uiImage
-                            }
-                        }
-                    }
-                }
+               
 
                 if viewModel.selectedImage != nil {
                     Button(action: {

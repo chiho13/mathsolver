@@ -39,12 +39,12 @@ struct ContentView: View {
         return CGRect(x: rectX, y: rectY, width: rectWidth, height: rectHeight)
     }()
     @State private var freezeImage: UIImage? = nil
-
+    @State private var imageOffset: CGSize = .zero 
     // Predefined prompt for math solving
     private let mathPrompt = "Solve the math problem in the image"
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.15), Color.purple.opacity(0.10)]), startPoint: .topLeading, endPoint: .bottomTrailing)
                     .ignoresSafeArea()
@@ -55,37 +55,36 @@ struct ContentView: View {
                 VStack(spacing: 20) {
                     if isCameraAuthorized {
 
-                //         if let image = freezeImage {
-                //             CapturedImageWithBracketView(
-                //                 image: image,
-                //                 captureRect: $captureRect,
-                //                 isAnimatingCroppedArea: viewModel.isAnimatingCroppedArea
-                //             )
-                //                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                //                 .ignoresSafeArea(.all)
-                //                 .transition(.identity)
+                        if let image = selectedPhotoImage {
+                            ImageWithBracketView(
+                                image: image,
+                                captureRect: $captureRect,
+                                isAnimatingCroppedArea: viewModel.isAnimatingCroppedArea,
+                                currentImageOffset: $imageOffset
+                            )
+                               .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .ignoresSafeArea(.all)
+                                .transition(.identity)
 
-                //                 Rectangle()
-                // .stroke(Color.red, lineWidth: 2)
-                // .frame(width: captureRect.width, height: captureRect.height)
-                // .position(x: captureRect.midX, y: captureRect.midY)
-                //         } else {
-                //             ZStack {
-                //                 CameraWithBracketsView(capturedImage: $croppedImage, originalImage: $originalImage, viewModel: viewModel, triggerCapture: $triggerCapture, captureRect: $captureRect, freezeImage: $freezeImage)
-                //                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                //                     .ignoresSafeArea(.all)
-                //                     .transition(.identity)
-                              
-                //             }
-                //         }
-
-                ZStack {
+                        } else {
+                            ZStack {
                                 CameraWithBracketsView(capturedImage: $croppedImage, originalImage: $originalImage, viewModel: viewModel, triggerCapture: $triggerCapture, captureRect: $captureRect, freezeImage: $freezeImage)
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                                     .ignoresSafeArea(.all)
                                     .transition(.identity)
                               
                             }
+                        }
+
+                // ZStack {
+                //                 CameraWithBracketsView(capturedImage: $croppedImage, originalImage: $originalImage, viewModel: viewModel, triggerCapture: $triggerCapture, captureRect: $captureRect, freezeImage: $freezeImage)
+                //                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                //                     .ignoresSafeArea(.all)
+                //                     .transition(.identity)
+                              
+                        
+                            
+                //             }
                             
                     } else {
                         VStack {
@@ -148,7 +147,7 @@ struct ContentView: View {
                                 VStack {
                                     Spacer()
                                     
-                                    if isCameraAuthorized && originalImage == nil {
+                                    if isCameraAuthorized && originalImage == nil && selectedPhotoImage == nil {
                                         Text("Take photo of a math question")
                                             .font(.system(size: 12, weight: .medium))
                                             .foregroundColor(.white)
@@ -158,7 +157,7 @@ struct ContentView: View {
                                                 Capsule()
                                                     .fill(Color.fromHex("#222222").opacity(0.8))
                                             )
-                                            .padding(.bottom, 24)
+                                            .padding(.bottom, 32)
                                         
                                         HStack(spacing: 60) {
                                             // Photo picker button on the left
@@ -230,33 +229,84 @@ struct ContentView: View {
                                             }
                                             .buttonStyle(PlainButtonStyle())
                                         }
-                                        .padding(.bottom, 40) // Add bottom padding for safe area
+                                        .padding(.bottom, 60) // Add bottom padding for safe area
                                         
                                         // Test animation button (only show when camera is active)
                                        
-                                        Button(action: {
-                                            if viewModel.isAnimatingCroppedArea {
-                                                viewModel.isAnimatingCroppedArea = false
-                                            } else {
-                                                viewModel.isAnimatingCroppedArea = true
-                                                // Auto-stop after 3 seconds for demo
-                                                DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
-                                                    viewModel.isAnimatingCroppedArea = false
-                                                }
-                                            }
-                                        }) {
-                                            Text(viewModel.isAnimatingCroppedArea ? "Stop Animation" : "Test Animation")
-                                                .font(.system(size: 14, weight: .medium))
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 16)
-                                                .padding(.vertical, 8)
-                                                .background(
-                                                    Capsule()
-                                                        .fill(viewModel.isAnimatingCroppedArea ? Color.red.opacity(0.8) : Color.blue.opacity(0.8))
-                                                )
-                                        }
-                                        .padding(.bottom, 30)
+                                        // Button(action: {
+                                        //     if viewModel.isAnimatingCroppedArea {
+                                        //         viewModel.isAnimatingCroppedArea = false
+                                        //     } else {
+                                        //         viewModel.isAnimatingCroppedArea = true
+                                        //         // Auto-stop after 3 seconds for demo
+                                        //         DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+                                        //             viewModel.isAnimatingCroppedArea = false
+                                        //         }
+                                        //     }
+                                        // }) {
+                                        //     Text(viewModel.isAnimatingCroppedArea ? "Stop Animation" : "Test Animation")
+                                        //         .font(.system(size: 14, weight: .medium))
+                                        //         .foregroundColor(.white)
+                                        //         .padding(.horizontal, 16)
+                                        //         .padding(.vertical, 8)
+                                        //         .background(
+                                        //             Capsule()
+                                        //                 .fill(viewModel.isAnimatingCroppedArea ? Color.red.opacity(0.8) : Color.blue.opacity(0.8))
+                                        //         )
+                                        // }
+                                        // .padding(.bottom, 30)
                                     }
+
+                               if selectedPhotoImage != nil && !viewModel.isAnimatingCroppedArea {
+                            // Buttons for cropping the selected photo
+                           HStack(spacing: 32) {
+    Button(action: {
+        // Reset the photo view and go back to camera
+        selectedPhotoImage = nil
+        imageOffset = .zero // Reset offset for next use
+    }) {
+        Text("Cancel")
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(width: 100, height: 50)
+            .background(
+                RoundedRectangle(cornerRadius: 25)
+                    .fill(Color.red.opacity(0.9))
+                    .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
+            )
+    }
+    
+            Button(action: {
+            // Crop the image and process it
+            if let image = selectedPhotoImage {
+                let _croppedImage = cropImage(image: image, rect: captureRect, offset: imageOffset)
+                if let croppedImage = _croppedImage {
+                    viewModel.selectedImage = croppedImage
+                    viewModel.isAnimatingCroppedArea = true // Trigger dot animation
+                    Task {
+                        await viewModel.solveMathProblem() // Send to backend
+                    }
+                }
+            }
+            // Reset photo and go back to camera
+            withAnimation(.easeInOut(duration: 0.3)) {
+        imageOffset = .zero
+    }
+        }) {
+            Text("Solve")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(width: 100, height: 50)
+                .background(
+                    RoundedRectangle(cornerRadius: 25)
+                        .fill(Color.green.opacity(0.9))
+                        .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
+                )
+        }
+}
+.padding(.bottom, 32)
+.padding(.horizontal, 16)
+                        } 
                                 }
                 
             }
@@ -273,32 +323,32 @@ struct ContentView: View {
             .fullScreenCover(isPresented: $showPremiumView) {
                 PremiumView(headline: "paywall-title")
             }
-            .fullScreenCover(isPresented: $showCropView) {
-                if let image = selectedPhotoImage {
-                    MantisCropViewRepresentable(
-                        image: image,
-                        onCrop: { croppedImage in
-                            self.croppedImage = croppedImage
-                            self.originalImage = croppedImage
-                            selectedPhotoImage = nil
-                            showCropView = false
-                        },
-                        onCancel: {
-                            selectedPhotoImage = nil
-                            showCropView = false
-                        }
-                    )
-                    .ignoresSafeArea(.all)
-                }
-            }
-            .onChange(of: croppedImage) { _, newCroppedImage in
-                if let imageToSolve = newCroppedImage {
-                    Task {
-                        viewModel.selectedImage = imageToSolve
-                        await viewModel.solveMathProblem()
-                    }
-                }
-            }
+            // .fullScreenCover(isPresented: $showCropView) {
+            //     if let image = selectedPhotoImage {
+            //         MantisCropViewRepresentable(
+            //             image: image,
+            //             onCrop: { croppedImage in
+            //                 self.croppedImage = croppedImage
+            //                 self.originalImage = croppedImage
+            //                 selectedPhotoImage = nil
+            //                 showCropView = false
+            //             },
+            //             onCancel: {
+            //                 selectedPhotoImage = nil
+            //                 showCropView = false
+            //             }
+            //         )
+            //         .ignoresSafeArea(.all)
+            //     }
+            // }
+            // .onChange(of: croppedImage) { _, newCroppedImage in
+            //     if let imageToSolve = newCroppedImage {
+            //         Task {
+            //             viewModel.selectedImage = imageToSolve
+            //             await viewModel.solveMathProblem()
+            //         }
+            //     }
+            // }
             .onChange(of: viewModel.visionResponse) { _, newResponse in
                 if !newResponse.isEmpty {
                     // Start solution sheet and stop animation
@@ -320,6 +370,8 @@ struct ContentView: View {
                 freezeImage = nil
                 viewModel.visionResponse = ""
                 viewModel.errorMessage = nil
+                // selectedPhotoImage = nil
+                //  imageOffset = .zero
             }) {
                 NavigationView {
                     VStack {
@@ -380,7 +432,11 @@ struct ContentView: View {
                         }
                     }
                 }
+                .presentationDetents([.fraction(0.6), .large])
+                .presentationDragIndicator(.visible)
+//                .presentationBackground(.thinMaterial)
             }
+          
             .onChange(of: selectedPhotoItem) { _, newItem in
                 Task {
                     if let newItem = newItem {
@@ -431,7 +487,39 @@ struct ContentView: View {
             }
         }
     }
-
+    
+    // Function to perform the actual cropping
+       private func cropImage(image: UIImage, rect: CGRect, offset: CGSize) -> UIImage? {
+           guard let cgImage = image.cgImage else { return nil }
+           
+           let viewSize = UIScreen.main.bounds.size
+           let imageSize = image.size
+           
+           let initialScale = viewSize.width / imageSize.width
+           
+           // Calculate the scaled image size
+           let scaledImageWidth = imageSize.width * initialScale
+           let scaledImageHeight = imageSize.height * initialScale
+           
+           // Calculate the origin of the scaled image on the screen
+           let originX = (viewSize.width - scaledImageWidth) / 2.0
+           let originY = (viewSize.height - scaledImageHeight) / 2.0
+           
+           // Convert the on-screen captureRect to the original image's coordinate space
+           let cropRectX = (rect.minX - originX - offset.width) / initialScale
+           let cropRectY = (rect.minY - originY - offset.height) / initialScale
+           let cropRectWidth = rect.width / initialScale
+           let cropRectHeight = rect.height / initialScale
+           
+           let cropRect = CGRect(x: cropRectX, y: cropRectY, width: cropRectWidth, height: cropRectHeight)
+           
+           guard let croppedCGImage = cgImage.cropping(to: cropRect) else {
+               return nil
+           }
+           
+           return UIImage(cgImage: croppedCGImage)
+       }
+    
     private func checkCameraAuthorization() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:

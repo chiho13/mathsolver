@@ -56,81 +56,88 @@ struct CameraView: UIViewControllerRepresentable {
         Coordinator(parent: self)
     }
     
-    func makeUIViewController(context: UIViewControllerRepresentableContext<CameraView>) -> UIViewController {
-        let viewController = UIViewController()
-        context.coordinator.viewControllerView = viewController.view
-        
-        // This is the session you must keep a reference to
-        let session = AVCaptureSession()
-        session.sessionPreset = .photo
-        
-        guard let device = AVCaptureDevice.default(for: .video),
-              let input = try? AVCaptureDeviceInput(device: device) else {
-            DispatchQueue.main.async {
-                self.viewModel.errorMessage = "Failed to access camera. Please check your device settings."
-            }
-            return viewController
+   func makeUIViewController(context: UIViewControllerRepresentableContext<CameraView>) -> UIViewController {
+    let viewController = UIViewController()
+    context.coordinator.viewControllerView = viewController.view
+    
+    // Initialize the session
+    let session = AVCaptureSession()
+    session.sessionPreset = .photo
+    
+    guard let device = AVCaptureDevice.default(for: .video),
+          let input = try? AVCaptureDeviceInput(device: device) else {
+        DispatchQueue.main.async {
+            self.viewModel.errorMessage = "Failed to access camera. Please check your device settings."
         }
-        
-        // CRITICAL: Store the session in the coordinator
-        context.coordinator.captureSession = session
-        
-        context.coordinator.captureDevice = device
-        
-        let output = AVCapturePhotoOutput()
-        context.coordinator.photoOutput = output
-        
-        if session.canAddInput(input) {
-            session.addInput(input)
-        }
-        if session.canAddOutput(output) {
-            session.addOutput(output)
-        }
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            session.startRunning()
-        }
-        
-        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
-        previewLayer.videoGravity = .resizeAspectFill
-        previewLayer.frame = viewController.view.bounds
-        context.coordinator.previewLayer = previewLayer
-        
-        viewController.view.layer.addSublayer(previewLayer)
-        
-        // Setup the overlay for the capture rect
-        let overlayView = UIView(frame: viewController.view.bounds)
-        overlayView.backgroundColor = UIColor.black.withAlphaComponent(0.6)
-        
-        let cornerRadius: CGFloat = 8.0
-        let path = UIBezierPath(roundedRect: captureRect, cornerRadius: cornerRadius)
-        let maskLayer = CAShapeLayer()
-        let fullPath = UIBezierPath(rect: viewController.view.bounds)
-        fullPath.append(path)
-        maskLayer.path = fullPath.cgPath
-        maskLayer.fillRule = .evenOdd
-        overlayView.layer.mask = maskLayer
-        
-        viewController.view.addSubview(overlayView)
-        overlayView.tag = 999
-        maskLayer.name = "captureMask"
-        
-        // Setup the snapshot view for freezing the camera view
-        let snapshotView = UIImageView(frame: viewController.view.bounds)
-        snapshotView.contentMode = .scaleAspectFill
-        snapshotView.clipsToBounds = true
-        snapshotView.isHidden = true
-        viewController.view.addSubview(snapshotView)
-        context.coordinator.snapshotView = snapshotView
-        
-        let pinchGesture = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handlePinchGesture(_:)))
-        viewController.view.addGestureRecognizer(pinchGesture)
-        
-        let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleTapGesture(_:)))
-        viewController.view.addGestureRecognizer(tapGesture)
-        
         return viewController
     }
+    
+    // Store the session and device in the coordinator
+    context.coordinator.captureSession = session
+    context.coordinator.captureDevice = device
+    
+    let output = AVCapturePhotoOutput()
+    context.coordinator.photoOutput = output
+    
+    // Configure the session
+    session.beginConfiguration()
+    if session.canAddInput(input) {
+        session.addInput(input)
+    }
+    if session.canAddOutput(output) {
+        session.addOutput(output)
+    }
+    session.commitConfiguration()
+    
+    // Start the session on the main thread
+    DispatchQueue.main.async {
+        if !session.isRunning {
+            session.startRunning()
+            print("AVCaptureSession started.")
+        }
+    }
+    
+    // Set up the preview layer
+    let previewLayer = AVCaptureVideoPreviewLayer(session: session)
+    previewLayer.videoGravity = .resizeAspectFill
+    previewLayer.frame = viewController.view.bounds
+    context.coordinator.previewLayer = previewLayer
+    
+    viewController.view.layer.addSublayer(previewLayer)
+    
+    // Setup the overlay for the capture rect
+    let overlayView = UIView(frame: viewController.view.bounds)
+    overlayView.backgroundColor = UIColor.black.withAlphaComponent(0.6)
+    
+    let cornerRadius: CGFloat = 8.0
+    let path = UIBezierPath(roundedRect: captureRect, cornerRadius: cornerRadius)
+    let maskLayer = CAShapeLayer()
+    let fullPath = UIBezierPath(rect: viewController.view.bounds)
+    fullPath.append(path)
+    maskLayer.path = fullPath.cgPath
+    maskLayer.fillRule = .evenOdd
+    overlayView.layer.mask = maskLayer
+    
+    viewController.view.addSubview(overlayView)
+    overlayView.tag = 999
+    maskLayer.name = "captureMask"
+    
+    // Setup the snapshot view for freezing the camera view
+    let snapshotView = UIImageView(frame: viewController.view.bounds)
+    snapshotView.contentMode = .scaleAspectFill
+    snapshotView.clipsToBounds = true
+    snapshotView.isHidden = true
+    viewController.view.addSubview(snapshotView)
+    context.coordinator.snapshotView = snapshotView
+    
+    let pinchGesture = UIPinchGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handlePinchGesture(_:)))
+    viewController.view.addGestureRecognizer(pinchGesture)
+    
+    let tapGesture = UITapGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleTapGesture(_:)))
+    viewController.view.addGestureRecognizer(tapGesture)
+    
+    return viewController
+}
     
     func updateUIViewController(_ uiViewController: UIViewController, context: UIViewControllerRepresentableContext<CameraView>) {
         if triggerCapture {
@@ -177,38 +184,50 @@ struct CameraView: UIViewControllerRepresentable {
 // MARK: - AVCapturePhotoCaptureDelegate
 extension CameraView.Coordinator: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard let imageData = photo.fileDataRepresentation(),
-              let image = UIImage(data: imageData) else {
-            DispatchQueue.main.async {
-                self.parent.viewModel.isAnimatingShutter = false
-            }
-            return
-        }
-        
-        // Add haptic feedback for a successful capture
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
-        
-        let captureRect = self.parent.captureRect
-        
-        // Convert the on-screen capture rect to the photo's coordinate space
-        let metadataOutputRect = previewLayer?.metadataOutputRectConverted(fromLayerRect: captureRect) ?? .zero
-        let croppedImage = self.cropImage(image, to: metadataOutputRect)
-        
-        // Set the frozen image to the full, uncropped image
-        let frozenImage = image
-        
+    guard let imageData = photo.fileDataRepresentation(),
+          let image = UIImage(data: imageData) else {
         DispatchQueue.main.async {
-            self.parent.freezeImage = frozenImage
-            self.parent.originalImage = image
-            self.parent.capturedImage = croppedImage ?? image
-            
             self.parent.viewModel.isAnimatingShutter = false
-            self.parent.viewModel.isAnimatingCroppedArea = true
+            self.parent.viewModel.errorMessage = "Failed to capture image. Please try again."
         }
-        
-        reapplyZoomFactor()
+        return
     }
+    
+    // Add haptic feedback for a successful capture
+    let generator = UIImpactFeedbackGenerator(style: .medium)
+    generator.impactOccurred()
+    
+    let captureRect = self.parent.captureRect
+    
+    // Convert the on-screen capture rect to the photo's coordinate space
+    let metadataOutputRect = previewLayer?.metadataOutputRectConverted(fromLayerRect: captureRect) ?? .zero
+    let croppedImage = self.cropImage(image, to: metadataOutputRect)
+    
+    // Set the frozen image to the full, uncropped image
+    let frozenImage = image
+    
+    DispatchQueue.main.async {
+        self.parent.freezeImage = frozenImage
+        self.parent.originalImage = image
+        self.parent.capturedImage = croppedImage ?? image
+        
+        self.parent.viewModel.isAnimatingShutter = false
+        self.parent.viewModel.isAnimatingCroppedArea = true
+        
+        // Send the cropped image to the backend
+        if let croppedImage = croppedImage {
+            self.parent.viewModel.selectedImage = croppedImage
+            Task {
+                await self.parent.viewModel.solveMathProblem()
+            }
+        } else {
+            self.parent.viewModel.errorMessage = "Failed to crop the image. Please try again."
+            self.parent.viewModel.isAnimatingCroppedArea = false
+        }
+    }
+    
+    reapplyZoomFactor()
+}
 }
 
 // MARK: - Gesture Handling

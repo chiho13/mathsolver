@@ -29,6 +29,7 @@ struct ResizableBracketsView: View {
     
     var body: some View {
         ZStack {
+
             // Styled corner brackets with rounded corners and line caps
             styledBracket(at: .topLeft)
             styledBracket(at: .topRight)
@@ -36,10 +37,14 @@ struct ResizableBracketsView: View {
             styledBracket(at: .bottomRight)
             
             // Thin white border around capture area with rounded corners
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.white.opacity(0.3), lineWidth: 0.5)
-                .frame(width: captureRect.width, height: captureRect.height)
-                .position(x: captureRect.midX, y: captureRect.midY)
+     RoundedRectangle(cornerRadius: 8)
+            .fill(Color.white.opacity(0.05)) // White fill with 0.03 opacity
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.white.opacity(0.3), lineWidth: 0.5) // Original border
+            )
+            .frame(width: captureRect.width, height: captureRect.height)
+            .position(x: captureRect.midX, y: captureRect.midY)
             
             // Center crosshair for aiming
             Path { path in
@@ -140,11 +145,11 @@ struct ResizableBracketsView: View {
         
         // Define maximum constraints based on device position
         let topMargin: CGFloat = 200.0     // 200pt from top of device
-        let bottomMargin: CGFloat = 250.0  // 250pt from bottom of device
+        let bottomMargin: CGFloat = 290.0  // 290pt from bottom of device
         let sideMargin: CGFloat = 20.0     // Side padding
         
-        // Calculate maximum available height and width
-        let maxAvailableHeight = screenBounds.height - topMargin - bottomMargin
+        // New constraint: bracket height can't be more than 1/3 of the device height
+        let maxHeight = screenBounds.height / 3
         
         // Calculate the delta from the center for mirrored movement
         let deltaX = abs(newLocation.x - center.x)
@@ -154,11 +159,10 @@ struct ResizableBracketsView: View {
         let constrainedDeltaX = max(deltaX, minWidth / 2)
         let constrainedDeltaY = max(deltaY, minHeight / 2)
         
-        // Apply maximum constraints - use initial width as max width
+        // Apply maximum constraints
         let maxDeltaX = initialWidth / 2
-        let maxDeltaY = maxAvailableHeight / 2
         let finalDeltaX = min(constrainedDeltaX, maxDeltaX)
-        let finalDeltaY = min(constrainedDeltaY, maxDeltaY)
+        let finalDeltaY = min(constrainedDeltaY, maxHeight / 2) // Clamping by the new max height
         
         // Create new rect centered at the same point but with mirrored dimensions
         let newRect = CGRect(
@@ -168,12 +172,12 @@ struct ResizableBracketsView: View {
             height: finalDeltaY * 2
         )
         
-        // Ensure the rectangle stays within screen bounds with proper margins
+        // Ensure the rectangle stays within screen bounds with proper margins and the new height constraint
         let constrainedRect = CGRect(
             x: max(sideMargin, min(newRect.minX, screenBounds.width - newRect.width - sideMargin)),
             y: max(topMargin, min(newRect.minY, screenBounds.height - bottomMargin - newRect.height)),
             width: min(newRect.width, initialWidth),
-            height: min(newRect.height, maxAvailableHeight)
+            height: min(newRect.height, maxHeight) // Applying the new height constraint
         )
         
         captureRect = constrainedRect
