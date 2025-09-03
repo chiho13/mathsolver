@@ -289,9 +289,9 @@ struct ContentView: View {
                 }
             }
             // Reset photo and go back to camera
-            withAnimation(.easeInOut(duration: 0.3)) {
-        imageOffset = .zero
-    }
+    //         withAnimation(.easeInOut(duration: 0.3)) {
+    //     imageOffset = .zero
+    // }
         }) {
             Text("Solve")
                 .font(.system(size: 18, weight: .semibold))
