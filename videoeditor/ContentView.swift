@@ -40,6 +40,7 @@ struct ContentView: View {
     }()
     @State private var freezeImage: UIImage? = nil
     @State private var imageOffset: CGSize = .zero 
+    @State private var isImageAtTop: Bool = false
     // Predefined prompt for math solving
     private let mathPrompt = "Solve the math problem in the image"
 
@@ -56,15 +57,19 @@ struct ContentView: View {
                     if isCameraAuthorized {
 
                         if let image = selectedPhotoImage {
+                          VStack { // Wrap in a VStack to control vertical positioning
                             ImageWithBracketView(
                                 image: image,
                                 captureRect: $captureRect,
                                 isAnimatingCroppedArea: viewModel.isAnimatingCroppedArea,
                                 currentImageOffset: $imageOffset
                             )
-                               .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .ignoresSafeArea(.all)
-                                .transition(.identity)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .offset(y: isImageAtTop ? -((UIScreen.main.bounds.height / 3) - 120.0) : 0)
+                            .animation(.easeInOut(duration: 0.5), value: isImageAtTop)
+                        }
+                        .ignoresSafeArea(.all)
+                        .transition(.identity)
 
                         } else {
                             ZStack {
@@ -283,6 +288,8 @@ struct ContentView: View {
                 if let croppedImage = _croppedImage {
                     viewModel.selectedImage = croppedImage
                     viewModel.isAnimatingCroppedArea = true // Trigger dot animation
+
+                    
                     Task {
                         await viewModel.solveMathProblem() // Send to backend
                     }
@@ -352,6 +359,10 @@ struct ContentView: View {
             .onChange(of: viewModel.visionResponse) { _, newResponse in
                 if !newResponse.isEmpty {
                     // Start solution sheet and stop animation
+                     withAnimation(.easeInOut(duration: 0.5)) {
+                            isImageAtTop = true
+                        }
+
                     showSolutionSheet = true
                     viewModel.isAnimatingCroppedArea = false
                 }
@@ -359,6 +370,9 @@ struct ContentView: View {
             .onChange(of: viewModel.errorMessage) { _, newError in
                 if newError != nil {
                     // Start solution sheet and stop animation
+                     withAnimation(.easeInOut(duration: 0.5)) {
+                            isImageAtTop = true
+                        }
                     showSolutionSheet = true
                     viewModel.isAnimatingCroppedArea = false
                 }
@@ -370,71 +384,11 @@ struct ContentView: View {
                 freezeImage = nil
                 viewModel.visionResponse = ""
                 viewModel.errorMessage = nil
+                 isImageAtTop = false 
                 // selectedPhotoImage = nil
                 //  imageOffset = .zero
             }) {
-                NavigationView {
-                    VStack {
-                        if !viewModel.visionResponse.isEmpty {
-                            ScrollView {
-                                Text(viewModel.visionResponse)
-                                    .padding()
-                            }
-                        } else if let errorMessage = viewModel.errorMessage {
-                            VStack(spacing: 12) {
-                                Text(errorMessage.contains("No math problems detected") || errorMessage.contains("doesn't appear to contain mathematical content") ? "No math problem detected. Please try again." : errorMessage)
-                                    .foregroundColor(.red)
-                                    .padding()
-                                
-                                if errorMessage.contains("No math problems detected") || errorMessage.contains("doesn't appear to contain mathematical content") {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("📝 Tips for better results:")
-                                            .font(.headline)
-                                            .foregroundColor(.blue)
-                                        
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            HStack(alignment: .top) {
-                                                Text("•")
-                                                Text("Make sure the image contains clear mathematical equations, formulas, or word problems")
-                                            }
-                                            HStack(alignment: .top) {
-                                                Text("•")
-                                                Text("Ensure text is readable and not blurry")
-                                            }
-                                            HStack(alignment: .top) {
-                                                Text("•")
-                                                Text("Include the full problem, not just parts of it")
-                                            }
-                                            HStack(alignment: .top) {
-                                                Text("•")
-                                                Text("Good lighting helps with text recognition")
-                                            }
-                                        }
-                                        .font(.system(size: 14))
-                                        .foregroundColor(.secondary)
-                                    }
-                                    .padding()
-                                    .background(Color.blue.opacity(0.1))
-                                    .cornerRadius(10)
-                                    .padding(.horizontal)
-                                }
-                            }
-                        }
-                        Spacer()
-                    }
-                    .navigationTitle("Solution")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") {
-                                showSolutionSheet = false
-                            }
-                        }
-                    }
-                }
-                .presentationDetents([.fraction(0.6), .large])
-                .presentationDragIndicator(.visible)
-//                .presentationBackground(.thinMaterial)
+                SolutionSheetView(showSolutionSheet: $showSolutionSheet, visionResponse: viewModel.visionResponse, errorMessage: viewModel.errorMessage)
             }
           
             .onChange(of: selectedPhotoItem) { _, newItem in
@@ -572,54 +526,54 @@ struct ContentView: View {
     }
 }
 
-struct MantisCropViewRepresentable: UIViewControllerRepresentable {
-    typealias UIViewControllerType = CropViewController
-
-    let image: UIImage
-    let onCrop: (UIImage) -> Void
-    let onCancel: () -> Void
-
-    func makeUIViewController(context: Context) -> CropViewController {
-        let cropViewController = Mantis.cropViewController(image: image)
-        cropViewController.delegate = context.coordinator
-        cropViewController.modalPresentationStyle = .fullScreen
-        return cropViewController
-    }
-
-    func updateUIViewController(_ uiViewController: CropViewController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    class Coordinator: NSObject, CropViewControllerDelegate {
-        var parent: MantisCropViewRepresentable
-
-        init(_ parent: MantisCropViewRepresentable) {
-            self.parent = parent
-        }
-
-        func cropViewControllerDidCrop(_ cropViewController: CropViewController, cropped: UIImage, transformation: Transformation, cropInfo: CropInfo) {
-            parent.onCrop(cropped)
-        }
-
-        func cropViewControllerDidCancel(_ cropViewController: CropViewController, original: UIImage) {
-            parent.onCancel()
-        }
-        
-        func cropViewControllerDidFailToCrop(_ cropViewController: CropViewController, original: UIImage) {
-            parent.onCancel()
-        }
-        
-        func cropViewControllerDidBeginResize(_ cropViewController: CropViewController) {
-            // Optional method - no action needed
-        }
-        
-        func cropViewControllerDidEndResize(_ cropViewController: CropViewController, original: UIImage, cropInfo: CropInfo) {
-            // Optional method - no action needed
-        }
-    }
-}
+//struct MantisCropViewRepresentable: UIViewControllerRepresentable {
+//    typealias UIViewControllerType = CropViewController
+//
+//    let image: UIImage
+//    let onCrop: (UIImage) -> Void
+//    let onCancel: () -> Void
+//
+//    func makeUIViewController(context: Context) -> CropViewController {
+//        let cropViewController = Mantis.cropViewController(image: image)
+//        cropViewController.delegate = context.coordinator
+//        cropViewController.modalPresentationStyle = .fullScreen
+//        return cropViewController
+//    }
+//
+//    func updateUIViewController(_ uiViewController: CropViewController, context: Context) {}
+//
+//    func makeCoordinator() -> Coordinator {
+//        Coordinator(self)
+//    }
+//
+//    class Coordinator: NSObject, CropViewControllerDelegate {
+//        var parent: MantisCropViewRepresentable
+//
+//        init(_ parent: MantisCropViewRepresentable) {
+//            self.parent = parent
+//        }
+//
+//        func cropViewControllerDidCrop(_ cropViewController: CropViewController, cropped: UIImage, transformation: Transformation, cropInfo: CropInfo) {
+//            parent.onCrop(cropped)
+//        }
+//
+//        func cropViewControllerDidCancel(_ cropViewController: CropViewController, original: UIImage) {
+//            parent.onCancel()
+//        }
+//        
+//        func cropViewControllerDidFailToCrop(_ cropViewController: CropViewController, original: UIImage) {
+//            parent.onCancel()
+//        }
+//        
+//        func cropViewControllerDidBeginResize(_ cropViewController: CropViewController) {
+//            // Optional method - no action needed
+//        }
+//        
+//        func cropViewControllerDidEndResize(_ cropViewController: CropViewController, original: UIImage, cropInfo: CropInfo) {
+//            // Optional method - no action needed
+//        }
+//    }
+//}
 
 extension UserDefaults {
     static func resetDefaults() {

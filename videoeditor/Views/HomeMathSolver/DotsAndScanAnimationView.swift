@@ -137,11 +137,11 @@ struct DotsAndScanAnimationView: View {
         scanLineOffset = 0
         scanLineOpacity = 1.0
         generateRandomPositions()
-        withAnimation(.linear(duration: 0.3)) {
+        withAnimation(.linear(duration: 0.4)) {
             scanLineOffset = captureRect.width
             scanLineOpacity = 0.0
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             showScanLine = false
             showDots = true
             startDotLifecycleAnimation()
