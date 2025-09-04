@@ -53,7 +53,7 @@ class VisionService: ObservableObject {
             throw VisionError.noMathFound
         }
         
-        let mathPrompt = "Solve the mathematical problem(s) shown in this image. Provide a clear step-by-step solution with the final answer. If there are multiple problems, solve them all."
+        let mathPrompt = "Solve the mathematical problem(s) shown in this image. Provide a clear step-by-step solution and the final answer. Format the entire response using LaTeX."
         return try await performVisionRequest(prompt: mathPrompt, image: image)
     }
 
