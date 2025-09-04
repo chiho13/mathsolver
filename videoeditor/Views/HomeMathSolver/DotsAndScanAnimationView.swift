@@ -14,6 +14,7 @@ struct DotsAndScanAnimationView: View {
     @State private var numberOfDots: Int = 12
     private let dotDensity: CGFloat = 0.00025
     private let dotSize: CGFloat = 5.0
+    private let scanLineWidth: CGFloat = 4
 
     var body: some View {
         ZStack {
@@ -21,7 +22,7 @@ struct DotsAndScanAnimationView: View {
                 Rectangle()
                     .fill(Color.white)
                     .opacity(scanLineOpacity)
-                    .frame(width: 4, height: captureRect.height)
+                    .frame(width: scanLineWidth, height: captureRect.height)
                     .position(
                         x: captureRect.origin.x + scanLineOffset,
                         y: captureRect.origin.y + captureRect.height / 2
@@ -134,12 +135,11 @@ struct DotsAndScanAnimationView: View {
     private func startScanLineAnimation() {
         showScanLine = true
         showDots = false
-        scanLineOffset = 0
+        scanLineOffset = -scanLineWidth / 2
         scanLineOpacity = 1.0
         generateRandomPositions()
         withAnimation(.linear(duration: 0.4)) {
-            scanLineOffset = captureRect.width
-            scanLineOpacity = 0.0
+            scanLineOffset = captureRect.width + scanLineWidth / 2
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             showScanLine = false
@@ -151,7 +151,7 @@ struct DotsAndScanAnimationView: View {
     private func resetAnimation() {
         showScanLine = true
         showDots = false
-        scanLineOffset = 0
+        scanLineOffset = -scanLineWidth / 2
         scanLineOpacity = 1.0
         dotScales = Array(repeating: 0.0, count: numberOfDots)
         startScanLineAnimation()

@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		A48BCA922E65BA320016145C /* Mantis in Frameworks */ = {isa = PBXBuildFile; productRef = A48BCA912E65BA320016145C /* Mantis */; };
+		A48BCB0B2E69B67D0016145C /* SwiftMath in Frameworks */ = {isa = PBXBuildFile; productRef = A48BCB0A2E69B67D0016145C /* SwiftMath */; };
+		A48BCB122E69F5550016145C /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = A48BCB112E69F5550016145C /* MarkdownUI */; };
 		A4C17C0D2E1AB6E20082C004 /* storekiteditor.storekit in Resources */ = {isa = PBXBuildFile; fileRef = A4C17C0C2E1AB6E20082C004 /* storekiteditor.storekit */; };
 /* End PBXBuildFile section */
 
@@ -58,6 +60,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A48BCB122E69F5550016145C /* MarkdownUI in Frameworks */,
+				A48BCB0B2E69B67D0016145C /* SwiftMath in Frameworks */,
 				A48BCA922E65BA320016145C /* Mantis in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -121,6 +125,8 @@
 			name = videoeditor;
 			packageProductDependencies = (
 				A48BCA912E65BA320016145C /* Mantis */,
+				A48BCB0A2E69B67D0016145C /* SwiftMath */,
+				A48BCB112E69F5550016145C /* MarkdownUI */,
 			);
 			productName = videoeditor;
 			productReference = A4EEA29B2E01918E00AEE850 /* videoeditor.app */;
@@ -206,6 +212,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A48BCA902E65BA320016145C /* XCRemoteSwiftPackageReference "Mantis" */,
+				A48BCB092E69B67D0016145C /* XCRemoteSwiftPackageReference "SwiftMath" */,
+				A48BCB102E69F5550016145C /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A4EEA29C2E01918E00AEE850 /* Products */;
@@ -415,9 +423,9 @@
 				DEVELOPMENT_TEAM = CYL68JMKHB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Photos to PDF";
+				INFOPLIST_KEY_CFBundleDisplayName = "Photo AI Solver";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs access to your camera to import and edit videos.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to provide you with relevant information.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "This app needs permission to save edited videos to your photo library.";
@@ -450,9 +458,9 @@
 				DEVELOPMENT_TEAM = CYL68JMKHB;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "Photos to PDF";
+				INFOPLIST_KEY_CFBundleDisplayName = "Photo AI Solver";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_NSCameraUsageDescription = "This app needs access to your camera to import and edit videos.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We need your location to provide you with relevant information.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "This app needs permission to save edited videos to your photo library.";
@@ -597,6 +605,22 @@
 				minimumVersion = 1.7.5;
 			};
 		};
+		A48BCB092E69B67D0016145C /* XCRemoteSwiftPackageReference "SwiftMath" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/mgriebling/SwiftMath.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.7.3;
+			};
+		};
+		A48BCB102E69F5550016145C /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -604,6 +628,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A48BCA902E65BA320016145C /* XCRemoteSwiftPackageReference "Mantis" */;
 			productName = Mantis;
+		};
+		A48BCB0A2E69B67D0016145C /* SwiftMath */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A48BCB092E69B67D0016145C /* XCRemoteSwiftPackageReference "SwiftMath" */;
+			productName = SwiftMath;
+		};
+		A48BCB112E69F5550016145C /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A48BCB102E69F5550016145C /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

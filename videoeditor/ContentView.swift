@@ -41,6 +41,9 @@ struct ContentView: View {
     @State private var freezeImage: UIImage? = nil
     @State private var imageOffset: CGSize = .zero 
     @State private var isImageAtTop: Bool = false
+    @State private var dragOffsetY: CGFloat = 0
+    @State private var selectedDetent = PresentationDetent.fraction(0.6)
+    @State private var shouldAnimateImagePosition: Bool = false
     // Predefined prompt for math solving
     private let mathPrompt = "Solve the math problem in the image"
 
@@ -58,6 +61,7 @@ struct ContentView: View {
 
                         if let image = selectedPhotoImage {
                           VStack { // Wrap in a VStack to control vertical positioning
+                              
                             ImageWithBracketView(
                                 image: image,
                                 captureRect: $captureRect,
@@ -65,7 +69,7 @@ struct ContentView: View {
                                 currentImageOffset: $imageOffset
                             )
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .offset(y: isImageAtTop ? -((UIScreen.main.bounds.height / 3) - 120.0) : 0)
+                            .offset(y: (isImageAtTop && shouldAnimateImagePosition) ? -((UIScreen.main.bounds.height / 3) - 120.0) + dragOffsetY : dragOffsetY)
                             .animation(.easeInOut(duration: 0.5), value: isImageAtTop)
                         }
                         .ignoresSafeArea(.all)
@@ -73,7 +77,7 @@ struct ContentView: View {
 
                         } else {
                             ZStack {
-                                CameraWithBracketsView(capturedImage: $croppedImage, originalImage: $originalImage, viewModel: viewModel, triggerCapture: $triggerCapture, captureRect: $captureRect, freezeImage: $freezeImage)
+                                CameraWithBracketsView(capturedImage: $croppedImage, originalImage: $originalImage, viewModel: viewModel, triggerCapture: $triggerCapture, captureRect: $captureRect, freezeImage: $freezeImage, isImageAtTop: $isImageAtTop)
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                                     .ignoresSafeArea(.all)
                                     .transition(.identity)
@@ -382,13 +386,15 @@ struct ContentView: View {
                 originalImage = nil
                 croppedImage = nil
                 freezeImage = nil
-                viewModel.visionResponse = ""
                 viewModel.errorMessage = nil
-                 isImageAtTop = false 
+                 isImageAtTop = false
+                 dragOffsetY = 0
+                shouldAnimateImagePosition = false
+                selectedDetent = .fraction(0.6)
                 // selectedPhotoImage = nil
                 //  imageOffset = .zero
             }) {
-                SolutionSheetView(showSolutionSheet: $showSolutionSheet, visionResponse: viewModel.visionResponse, errorMessage: viewModel.errorMessage)
+                SolutionSheetView(showSolutionSheet: $showSolutionSheet, visionResponse: viewModel.visionResponse, errorMessage: viewModel.errorMessage, selectedDetent: $selectedDetent, dragOffset: $dragOffsetY)
             }
           
             .onChange(of: selectedPhotoItem) { _, newItem in
@@ -400,6 +406,7 @@ struct ContentView: View {
                                 if let image = UIImage(data: data) {
                                     print("Image loaded successfully, showing crop view")
                                     selectedPhotoImage = image
+                                    shouldAnimateImagePosition = true
                                     showCropView = true
                                     // Reset the picker selection
                                     selectedPhotoItem = nil

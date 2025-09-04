@@ -14,6 +14,7 @@ struct CameraWithBracketsView: View {
     @Binding var triggerCapture: Bool
     @Binding var captureRect: CGRect
     @Binding var freezeImage: UIImage?
+    @Binding var isImageAtTop: Bool
     @State private var showDotsView: Bool = false
     
     var body: some View {
@@ -49,6 +50,8 @@ struct CameraWithBracketsView: View {
                     .transition(.opacity)
             }
         }
+        .offset(y: isImageAtTop ? -((UIScreen.main.bounds.height / 3) - 120.0) : 0)
+        .animation(.easeInOut(duration: 0.5), value: isImageAtTop)
         .onChange(of: viewModel.isAnimatingCroppedArea) { _, isAnimating in
             if isAnimating {
                 showDotsView = true

@@ -7,9 +7,6 @@
     " Privacy Policy." : {
 
     },
-    "%lld." : {
-
-    },
     "•" : {
 
     },
@@ -179,6 +176,9 @@
           }
         }
       }
+    },
+    "Getting your solution..." : {
+
     },
     "Good lighting helps with text recognition" : {
 

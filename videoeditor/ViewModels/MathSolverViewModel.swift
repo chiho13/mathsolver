@@ -64,6 +64,7 @@ class VisionViewModel: ObservableObject {
         
         do {
             let response = try await visionService.performVisionRequest(prompt: prompt, image: image)
+            print("Vision Response: \(response)")
             self.visionResponse = response
         } catch let error as VisionError {
             self.errorMessage = self.handleVisionError(error)
@@ -90,6 +91,7 @@ class VisionViewModel: ObservableObject {
         
         do {
             let response = try await visionService.solveMathProblem(image: image)
+            print("Vision Response (Math): \(response)")
             self.visionResponse = response
         } catch let error as VisionError {
             self.errorMessage = self.handleVisionError(error)
@@ -124,7 +126,7 @@ class VisionViewModel: ObservableObject {
         case .jsonEncodingError(let jsonError):
             return "Failed to encode request data: \(jsonError.localizedDescription)"
         case .noMathFound:
-            return "📷 No math problems detected in this image. Please try taking a photo that contains mathematical equations, formulas, or problems to solve."
+            return "No math problems detected"
         case .imageContentNotSuitable:
             return "🔍 This image doesn't appear to contain mathematical content suitable for solving. Please capture an image with clear math problems."
         }

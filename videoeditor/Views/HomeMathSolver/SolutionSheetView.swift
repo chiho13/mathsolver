@@ -7,59 +7,41 @@
 
 
 import SwiftUI
+import SwiftMath
 
 struct SolutionSheetView: View {
     
     @Binding var showSolutionSheet: Bool
     var visionResponse: String
     var errorMessage: String?
+    @Binding var selectedDetent: PresentationDetent
+    @Binding var dragOffset: CGFloat
     
     var body: some View {
         NavigationView {
             VStack {
                 if !visionResponse.isEmpty {
                     ScrollView {
-                        Text(visionResponse)
-                            .padding()
+                        FormattedText(text: visionResponse)
+                            .padding(.horizontal, 25)
+                            .padding(.vertical)
                     }
                 } else if let errorMessage = errorMessage {
                     VStack(spacing: 12) {
-                        Text(errorMessage.contains("No math problems detected") || errorMessage.contains("doesn't appear to contain mathematical content") ? "No math problem detected. Please try again." : errorMessage)
+                        Text(errorMessage)
                             .foregroundColor(.red)
                             .padding()
-                        
-                        if errorMessage.contains("No math problems detected") || errorMessage.contains("doesn't appear to contain mathematical content") {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("📝 Tips for better results:")
-                                    .font(.headline)
-                                    .foregroundColor(.blue)
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack(alignment: .top) {
-                                        Text("•")
-                                        Text("Make sure the image contains clear mathematical equations, formulas, or word problems")
-                                    }
-                                    HStack(alignment: .top) {
-                                        Text("•")
-                                        Text("Ensure text is readable and not blurry")
-                                    }
-                                    HStack(alignment: .top) {
-                                        Text("•")
-                                        Text("Include the full problem, not just parts of it")
-                                    }
-                                    HStack(alignment: .top) {
-                                        Text("•")
-                                        Text("Good lighting helps with text recognition")
-                                    }
-                                }
-                                .font(.system(size: 14))
-                                .foregroundColor(.secondary)
-                            }
-                            .padding()
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(10)
-                            .padding(.horizontal)
-                        }
+                    }
+                } else {
+                    // Loading view
+                    VStack {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(1.5)
+                        Text("Getting your solution...")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 10)
                     }
                 }
                 Spacer()
@@ -74,7 +56,24 @@ struct SolutionSheetView: View {
                 }
             }
         }
-        .presentationDetents([.fraction(0.6), .large])
+        .presentationDetents([.fraction(0.6), .large], selection: $selectedDetent)
         .presentationDragIndicator(.visible)
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    if selectedDetent == .large {
+                        // Only track downward drags when sheet is fully expanded
+                        if value.translation.height > 0 {
+                            dragOffset = value.translation.height
+                        }
+                    }
+                }
+                .onEnded { _ in
+                    // Reset drag offset when gesture ends
+                    withAnimation(.spring()) {
+                        dragOffset = 0
+                    }
+                }
+        )
     }
 }

@@ -38,23 +38,16 @@ class VisionService: ObservableObject {
     // Assuming the same base URL as SearchAPIService
     private let baseURL = "https://render-proxy-psbm.onrender.com"
     
-    func detectMathContent(image: UIImage) async throws -> Bool {
-        let detectionPrompt = "Look at this image and determine if it contains mathematical problems, equations, formulas, or mathematical content that can be solved. Respond with ONLY 'YES' if it contains solvable math content, or 'NO' if it doesn't contain any mathematical problems to solve."
-        
-        let response = try await performVisionRequest(prompt: detectionPrompt, image: image)
-        return response.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == "YES"
-    }
-    
     func solveMathProblem(image: UIImage) async throws -> String {
-        // First check if the image contains math content
-        let containsMath = try await detectMathContent(image: image)
+        let mathPrompt = "Solve the mathematical problem(s) in this image. For simple problems like basic arithmetic, provide only the final answer. For complex problems, provide a detailed step-by-step solution. **For the final answer, please bold it using Markdown's double asterisks.** Format your response using Markdown. Use LaTeX for all mathematical equations, enclosing inline math with single dollar signs ($...$) and block equations with double dollar signs ($$...$$). Do not use the \\boxed{} command. Please try to avoid ending a sentence with a LaTeX formula followed by a period. If there are no mathematical problems in the image, or if the content is not a math problem, reply with only the exact string 'NOMATH'."
         
-        if !containsMath {
+        let response = try await performVisionRequest(prompt: mathPrompt, image: image)
+        
+        if response.trimmingCharacters(in: .whitespacesAndNewlines) == "NOMATH" {
             throw VisionError.noMathFound
         }
         
-        let mathPrompt = "Solve the mathematical problem(s) shown in this image. Provide a clear step-by-step solution and the final answer. Format the entire response using LaTeX."
-        return try await performVisionRequest(prompt: mathPrompt, image: image)
+        return response
     }
 
     func performVisionRequest(prompt: String, image: UIImage) async throws -> String {
