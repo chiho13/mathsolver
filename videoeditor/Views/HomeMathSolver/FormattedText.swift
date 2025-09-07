@@ -30,6 +30,8 @@ struct MathLabel: UIViewRepresentable {
 /// A view that displays a mix of Markdown and LaTeX text with improved styling.
 struct FormattedText: View {
     let text: String
+    @State private var parts: [ContentPart] = []
+    @State private var isRendered = false
 
     // Defines the different types of content parts.
     private enum ContentType {
@@ -46,27 +48,27 @@ struct FormattedText: View {
     }
 
     /// Parses the input text into an array of `ContentPart`s.
-    private func parseText() -> [ContentPart] {
+    private func parseText(from textToParse: String) -> [ContentPart] {
         var parts: [ContentPart] = []
-        var lastEnd: String.Index = text.startIndex
+        var lastEnd: String.Index = textToParse.startIndex
         
         do {
             // This regex finds all instances of $$...$$ or $...$
             let regex = try NSRegularExpression(pattern: #"(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)"#)
-            let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
+            let matches = regex.matches(in: textToParse, range: NSRange(textToParse.startIndex..., in: textToParse))
             
             for match in matches {
-                if let range = Range(match.range, in: text) {
+                if let range = Range(match.range, in: textToParse) {
                     // Add the Markdown text that comes before the LaTeX block.
                     if range.lowerBound > lastEnd {
-                        let markdownText = String(text[lastEnd..<range.lowerBound])
+                        let markdownText = String(textToParse[lastEnd..<range.lowerBound])
                         if !markdownText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             parts.append(ContentPart(value: markdownText, type: .markdown))
                         }
                     }
                     
                     // Add the LaTeX part, determining if it's inline or block.
-                    var latex = String(text[range])
+                    var latex = String(textToParse[range])
                     if latex.hasPrefix("$$") {
                         latex.removeFirst(2)
                         latex.removeLast(2)
@@ -82,15 +84,15 @@ struct FormattedText: View {
             }
             
             // Add any remaining Markdown text after the last LaTeX block.
-            if lastEnd < text.endIndex {
-                let markdownText = String(text[lastEnd...])
+            if lastEnd < textToParse.endIndex {
+                let markdownText = String(textToParse[lastEnd...])
                 if !markdownText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     parts.append(ContentPart(value: markdownText, type: .markdown))
                 }
             }
         } catch {
             // If regex fails for any reason, treat the entire text as Markdown.
-            parts.append(ContentPart(value: text, type: .markdown))
+            parts.append(ContentPart(value: textToParse, type: .markdown))
         }
         
         return parts
@@ -120,7 +122,7 @@ struct FormattedText: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            ForEach(parseText(), id: \.self) { part in
+            ForEach(parts, id: \.self) { part in
                 switch part.type {
                 case .markdown:
                     Markdown(part.value)
@@ -134,6 +136,16 @@ struct FormattedText: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, 10)
                 }
+            }
+        }
+        .opacity(isRendered ? 1 : 0)
+        .task(id: text) {
+            isRendered = false
+            parts = parseText(from: text)
+            // A short delay to allow the view hierarchy to update before fading in
+            try? await Task.sleep(nanoseconds: 50_000_000) // 0.05 seconds
+            withAnimation {
+                isRendered = true
             }
         }
     }

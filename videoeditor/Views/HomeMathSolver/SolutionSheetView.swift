@@ -25,7 +25,9 @@ struct SolutionSheetView: View {
                         FormattedText(text: visionResponse)
                             .padding(.horizontal, 25)
                             .padding(.vertical)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .contentMargins(.horizontal, 0)
                 } else if let errorMessage = errorMessage {
                     VStack(spacing: 12) {
                         Text(errorMessage)
