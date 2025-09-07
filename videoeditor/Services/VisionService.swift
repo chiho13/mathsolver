@@ -53,6 +53,7 @@ class VisionService: ObservableObject {
         
         FORMATTING RULES:
         - Use Markdown formatting.
+        - For step-by-step solutions, use Markdown H2 headings for each step (e.g., ## Step 1).
         - When presenting the final answer, bold the introductory text (e.g., "**Final Answer:**"), but do NOT wrap the LaTeX formula itself in asterisks.
         - CRITICAL: You MUST use LaTeX for all math. For inline math, use single dollar signs ($...$). For block equations, use double dollar signs ($$...$$).
         - Under no circumstances use \\[...\\] or \\(...\\) syntax. Only use $...$ and $$...$$. This is a strict requirement.
@@ -61,10 +62,7 @@ class VisionService: ObservableObject {
         
         EXAMPLES:
         - Simple: "The answer is **42**."
-        - Complex: "First, we integrate the term $x^2$.
-        $$ \int x^2 dx = \frac{x^3}{3} $$
-        Next, we add the constant of integration.
-        **The final answer is** $$ \frac{x^3}{3} + C $$"
+        - Complex: "## Step 1\nFirst, we write down the equation from the image.\n$$2x = 4$$\n\n## Step 2\nThen, we solve for x by dividing both sides by 2.\n$$x = 2$$\n\n**Final Answer:**\nThe final solution is $$x=2$$."
         
         Analyze the image now:
         """
