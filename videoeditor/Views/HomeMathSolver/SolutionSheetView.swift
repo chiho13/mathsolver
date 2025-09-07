@@ -27,6 +27,7 @@ struct SolutionSheetView: View {
                             .padding(.vertical)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .scrollIndicators(.visible)
                     .contentMargins(.horizontal, 0)
                 } else if let errorMessage = errorMessage {
                     VStack(spacing: 12) {

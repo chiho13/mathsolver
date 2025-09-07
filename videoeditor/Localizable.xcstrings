@@ -325,7 +325,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Professional quality PDF output"
+            "value" : "All math levels supported"
           }
         }
       }
@@ -336,7 +336,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "All layout options"
+            "value" : "AI Text Recognition"
           }
         }
       }
@@ -347,7 +347,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unlimited photos per PDF"
+            "value" : "Solve problems in one tap"
           }
         }
       }
@@ -358,7 +358,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Add more than 3 photos"
+            "value" : "Step by step solution"
           }
         }
       }
@@ -369,7 +369,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unlimited photos to PDF"
+            "value" : "Unlock All Features "
           }
         }
       }
