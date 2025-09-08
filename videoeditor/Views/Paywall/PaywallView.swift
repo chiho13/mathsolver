@@ -23,7 +23,7 @@ struct PaywallView: View {
                     PaywallBenefitsView()
                     .padding(.top, 100)
                     
-                    ValuePropositionView()
+//                    ValuePropositionView()
 
                     PlanCardSection()
 
@@ -107,7 +107,7 @@ private struct HeaderView: View {
                         .multilineTextAlignment(.center)
                         .foregroundStyle(LinearGradient(colors: [.white, .white.opacity(0.9)], startPoint: .top, endPoint: .bottom))
                     
-                    Text("Create professional PDFs from your photos")
+                    Text("Get Detailed Step by Step Solution")
                         .font(.system(size: 16, weight: .medium))
                         .multilineTextAlignment(.center)
                         .foregroundColor(.white.opacity(0.8))

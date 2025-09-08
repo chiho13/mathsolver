@@ -35,97 +35,138 @@ struct OnboardingView: View {
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
                     // Background bar
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.gray.opacity(0.25))
-                        .frame(height: 6)
+                    // RoundedRectangle(cornerRadius: 4)
+                    //     .fill(Color.gray.opacity(0.15))
+                    //     .frame(height: 8)
                     
                     // Progress bar
-                    RoundedRectangle(cornerRadius: 3)
+                    RoundedRectangle(cornerRadius: 4)
                         .fill(LinearGradient(
-                            gradient: Gradient(colors: [Color.accentColor, Color.accentColor.opacity(0.8)]),
+                            gradient: Gradient(colors: [
+                                colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor,
+                                colorScheme == .dark ? Color.fromHex("#f7cbe3").opacity(0.7) : Color.accentColor.opacity(0.8)
+                            ]),
                             startPoint: .leading,
                             endPoint: .trailing
                         ))
-                        .frame(width: geometry.size.width * (CGFloat(currentIndex + 1) / CGFloat(pages.count)), height: 6)
-                        .animation(.easeInOut(duration: 0.3), value: currentIndex)
+                        .frame(width: geometry.size.width * (CGFloat(currentIndex + 1) / CGFloat(pages.count)), height: 8)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: currentIndex)
                 }
             }
-            .frame(height: 6)
-            .padding(.horizontal, 32)
-            .padding(.top, 24)
-            .padding(.bottom, 70)
-            .opacity(0)
+            .frame(height: 8)
+            .padding(.horizontal, 28)
+            .padding(.top, 20)
+            .padding(.bottom, 40)
 
             // Main content
             TabView(selection: $currentIndex) {
                 ForEach(0..<pages.count, id: \.self) { pageIndex in
                     VStack(spacing: 0) {
                         // Content area
-                        VStack(alignment: .center, spacing: 32) {
+                        VStack(alignment: .center, spacing: 40) {
                             // Title section
-                            VStack(spacing: 24) {
+                            VStack(spacing: 28) {
                                 ForEach(pages[pageIndex].indices, id: \.self) { index in
                                     let bulletPoint = pages[pageIndex][index]
                                     
                                     if index == 0 {
                                         // Main title
-                                        VStack(spacing: 20) {
-                                            Image(systemName: bulletPoint.iconName)
-                                                .font(.system(size: 48, weight: .medium))
-                                                .foregroundColor(colorScheme == .dark ? Color.fromHex("#f7cbe3") : .accentColor)
-                                                .padding(.bottom, 4)
+                                        VStack(spacing: 24) {
+                                            // Enhanced icon with background
+                                            ZStack {
+                                                Circle()
+                                                    .fill(LinearGradient(
+                                                        gradient: Gradient(colors: [
+                                                            (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.15),
+                                                            (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.05)
+                                                        ]),
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    ))
+                                                    .frame(width: 100, height: 100)
+                                                
+                                                Image(systemName: bulletPoint.iconName)
+                                                    .font(.system(size: 44, weight: .medium))
+                                                    .foregroundColor(colorScheme == .dark ? Color.fromHex("#f7cbe3") : .accentColor)
+                                            }
+                                            .shadow(color: (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.2), radius: 20, x: 0, y: 10)
                                             
                                             let localizedString = NSLocalizedString(bulletPoint.text, comment: "")
                                             let processedString = localizedString.replacingOccurrences(of: "\\n", with: "\n")
                                             
                                             Text(processedString)
                                                 .multilineTextAlignment(.center)
-                                                .font(.system(size: 26, weight: .bold))
-                                                .foregroundColor(.primary)
+                                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                                .foregroundStyle(LinearGradient(
+                                                    gradient: Gradient(colors: [
+                                                        .primary,
+                                                        .primary.opacity(0.8)
+                                                    ]),
+                                                    startPoint: .topLeading,
+                                                    endPoint: .bottomTrailing
+                                                ))
                                                 .fixedSize(horizontal: false, vertical: true)
-                                                .padding(.horizontal, 24)
+                                                .padding(.horizontal, 20)
+                                                .lineSpacing(4)
                                         }
                                     }
                                 }
                             }
-                            .padding(.top, 32)
+                            .padding(.top, 20)
                             
                             // Feature list
-                            VStack(spacing: 28) {
+                            VStack(spacing: 24) {
                                 ForEach(pages[pageIndex].indices, id: \.self) { index in
                                     let bulletPoint = pages[pageIndex][index]
                                     
                                     if index != 0 {
-                                        HStack(spacing: 18) {
-                                            // Icon container
+                                        HStack(spacing: 20) {
+                                            // Enhanced icon container
                                             ZStack {
-                                                Circle()
-                                                    .fill(Color.accentColor.opacity(0.12))
-                                                    .frame(width: 44, height: 44)
+                                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                                    .fill(LinearGradient(
+                                                        gradient: Gradient(colors: [
+                                                            (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.15),
+                                                            (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.08)
+                                                        ]),
+                                                        startPoint: .topLeading,
+                                                        endPoint: .bottomTrailing
+                                                    ))
+                                                    .frame(width: 52, height: 52)
                                                 
                                                 Image(systemName: bulletPoint.iconName)
-                                                    .font(.system(size: 18, weight: .medium))
+                                                    .font(.system(size: 20, weight: .semibold))
                                                     .foregroundColor(colorScheme == .dark ? Color.fromHex("#f7cbe3") : .accentColor)
                                             }
+                                            .shadow(color: (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.15), radius: 8, x: 0, y: 4)
                                             
-                                            VStack(alignment: .leading, spacing: 2) {
+                                            VStack(alignment: .leading, spacing: 4) {
                                                 Text(LocalizedStringKey(bulletPoint.text))
-                                                    .font(.system(size: 17, weight: .medium))
+                                                    .font(.system(size: 18, weight: .semibold, design: .rounded))
                                                     .foregroundColor(.primary)
                                                     .fixedSize(horizontal: false, vertical: true)
                                                     .multilineTextAlignment(.leading)
+                                                    .lineSpacing(2)
                                             }
                                             
                                             Spacer()
                                         }
                                         .frame(maxWidth: .infinity)
-                                        .padding(.horizontal, 36)
+                                        .padding(.horizontal, 28)
+                                        .padding(.vertical, 8)
+                                        // .background(
+                                        //     RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                        //         .fill(Color.primary.opacity(0.02))
+                                        //         .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+                                        // )
+                                        .padding(.horizontal, 8)
                                         .opacity(index == 0 ? 0 : 1)
-                                        .animation(.easeInOut(duration: 0.5).delay(Double(index) * 0.1), value: currentIndex)
+                                        .scaleEffect(index == 0 ? 0.9 : 1.0)
+                                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(Double(index) * 0.15), value: currentIndex)
                                     }
                                 }
                             }
-                            .padding(.top, 40)
+                            .padding(.top, 20)
                             
                             Spacer()
                         }
@@ -150,23 +191,34 @@ struct OnboardingView: View {
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             
-            // Page indicator
-            HStack(spacing: 12) {
+            // Enhanced page indicator
+            HStack(spacing: 16) {
                 ForEach(0..<pages.count, id: \.self) { index in
                     ZStack {
+                        // Background circle
                         Circle()
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(width: 8, height: 8)
+                            .fill(Color.gray.opacity(colorScheme == .dark ? 0.2 : 0.25))
+                            .frame(width: 10, height: 10)
                         
-                        Circle()
-                            .fill(Color.accentColor)
-                            .frame(width: index == currentIndex ? 10 : 8, height: index == currentIndex ? 10 : 8)
-                            .opacity(index == currentIndex ? 1 : 0)
+                        // Active indicator
+                        if index == currentIndex {
+                            Circle()
+                                .fill(LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor,
+                                        colorScheme == .dark ? Color.fromHex("#f7cbe3").opacity(0.8) : Color.accentColor.opacity(0.8)
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ))
+                                .frame(width: 12, height: 12)
+                                .shadow(color: (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.4), radius: 4, x: 0, y: 2)
+                        }
                     }
-                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: currentIndex)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: currentIndex)
                 }
             }
-            .padding(.vertical, 24)
+            .padding(.vertical, 32)
             
             // Action buttons
             VStack(spacing: 16) {
@@ -185,16 +237,18 @@ struct OnboardingView: View {
             colorScheme == .dark ?
                 LinearGradient(
                     gradient: Gradient(colors: [
-                        Color.fromHex("#540e30").opacity(0.15),
-                        Color.fromHex("#1d031f").opacity(0.8)
+                        Color.fromHex("#540e30").opacity(0.12),
+                        Color.fromHex("#1d031f").opacity(0.6),
+                        Color.black.opacity(0.9)
                     ]),
                     startPoint: .top,
                     endPoint: .bottom
                 ) :
                 LinearGradient(
                     gradient: Gradient(colors: [
-                        Color.accentColor.opacity(0.02),
-                        Color.clear
+                        Color.accentColor.opacity(0.03),
+                        Color.clear,
+                        Color.gray.opacity(0.02)
                     ]),
                     startPoint: .top,
                     endPoint: .bottom
@@ -279,7 +333,7 @@ struct OnboardingView: View {
         }) {
             HStack(spacing: 12) {
                 Spacer()
-                Text(self.currentIndex == 0 ? "Get Started" : "Next")
+                Text(self.currentIndex == 0 ? "Get Started" : "Continue")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.white)
                 Image(systemName: "arrow.right")
@@ -308,13 +362,13 @@ struct OnboardingView: View {
 
     private let pages: [[BulletPoint]] = [
         [
-            BulletPoint(iconName: "doc.text.fill", text: "onboarding-page1"),
-            BulletPoint(iconName: "square.grid.2x2.fill", text: "onboarding-page1-bulletpointone"),
-            BulletPoint(iconName: "arrow.clockwise.circle.fill", text: "onboarding-page1-bulletpointtwo")
+            BulletPoint(iconName: "function", text: "onboarding-page1"),
+            BulletPoint(iconName: "camera.fill", text: "onboarding-page1-bulletpointone"),
+            BulletPoint(iconName: "x.squareroot", text: "onboarding-page1-bulletpointtwo")
         ],
         [
-            BulletPoint(iconName: "square.and.arrow.up.fill", text: "onboarding-page2"),
-            BulletPoint(iconName: "icloud.and.arrow.up.fill", text: "onboarding-page2-bulletpointtwo"),
+            BulletPoint(iconName: "lightbulb.fill", text: "onboarding-page2"),
+            BulletPoint(iconName: "list.number", text: "onboarding-page2-bulletpointtwo"),
         ]
     ]
 
@@ -387,6 +441,3 @@ struct OnboardingView: View {
         return nil
     }
 }
-
-// MARK: - Custom Button Style
-

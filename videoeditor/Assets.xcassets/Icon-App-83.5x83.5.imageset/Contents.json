@@ -1,17 +1,15 @@
 {
   "images" : [
     {
-      "filename" : "cameramath.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "cameramath@2x.png",
+      "filename" : "Icon-App-83.5x83.5@2x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "cameramath@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

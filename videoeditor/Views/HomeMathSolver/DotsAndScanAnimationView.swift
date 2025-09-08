@@ -20,7 +20,7 @@ struct DotsAndScanAnimationView: View {
         ZStack {
             if showScanLine {
                 Rectangle()
-                    .fill(Color.white)
+                    .fill(Color.fromHex("#00e17b"))
                     .opacity(scanLineOpacity)
                     .frame(width: scanLineWidth, height: captureRect.height)
                     .position(

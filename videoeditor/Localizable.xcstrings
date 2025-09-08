@@ -129,9 +129,6 @@
         }
       }
     },
-    "Create professional PDFs from your photos" : {
-
-    },
     "Delete" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -161,6 +158,9 @@
       }
     },
     "Everything You Need" : {
+
+    },
+    "Get Detailed Step by Step Solution" : {
 
     },
     "Get Started" : {
@@ -228,9 +228,6 @@
         }
       }
     },
-    "Next" : {
-
-    },
     "OK" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -248,7 +245,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Convert your photos into\nprofessional PDF documents"
+            "value" : "Solve math problems\ninstantly with AI"
           }
         }
       }
@@ -259,7 +256,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Multiple photos per page with flexible layouts"
+            "value" : "Snap a photo and get step-by-step solutions"
           }
         }
       }
@@ -270,7 +267,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Portrait and landscape orientations"
+            "value" : "Works with algebra, calculus, geometry & more"
           }
         }
       }
@@ -281,7 +278,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Perfect for documents, receipts,\nand sharing with others"
+            "value" : "Learn better with\ndetailed explanations"
           }
         }
       }
@@ -292,7 +289,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Share PDFs easily via email, cloud, or messaging"
+            "value" : "Understand concepts with clear breakdowns"
           }
         }
       }
