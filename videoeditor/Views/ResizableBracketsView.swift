@@ -12,6 +12,24 @@ struct ResizableBracketsView: View {
     let screenBounds: CGRect
     let isResizingDisabled: Bool
     let initialWidth: CGFloat
+    let onDragEnded: ((CGRect) -> Void)?
+    
+    // Convenience initializer for backward compatibility
+    init(captureRect: Binding<CGRect>, screenBounds: CGRect, isResizingDisabled: Bool, initialWidth: CGFloat) {
+        self._captureRect = captureRect
+        self.screenBounds = screenBounds
+        self.isResizingDisabled = isResizingDisabled
+        self.initialWidth = initialWidth
+        self.onDragEnded = nil
+    }
+    
+    init(captureRect: Binding<CGRect>, screenBounds: CGRect, isResizingDisabled: Bool, initialWidth: CGFloat, onDragEnded: ((CGRect) -> Void)?) {
+        self._captureRect = captureRect
+        self.screenBounds = screenBounds
+        self.isResizingDisabled = isResizingDisabled
+        self.initialWidth = initialWidth
+        self.onDragEnded = onDragEnded
+    }
     
     // Bracket styling
     private let bracketLength: CGFloat = 20.0
@@ -29,22 +47,29 @@ struct ResizableBracketsView: View {
     
     var body: some View {
         ZStack {
-
-            // Styled corner brackets with rounded corners and line caps
-            styledBracket(at: .topLeft)
-            styledBracket(at: .topRight)
-            styledBracket(at: .bottomLeft)
-            styledBracket(at: .bottomRight)
             
-            // Thin white border around capture area with rounded corners
+            // Thin white border around capture area with rounded corners (drawn first, behind brackets)
      RoundedRectangle(cornerRadius: 8)
             .fill(Color.white.opacity(0.05)) // White fill with 0.03 opacity
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.white.opacity(0.3), lineWidth: 0.5) // Original border
+                    .stroke(Color.white.opacity(0.9), lineWidth: 0.5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.black.opacity(0.4), lineWidth: 1.5)
+                            .blur(radius: 1)
+                    )
+                    .shadow(color: Color.white.opacity(0.3), radius: 1, x: 0, y: 0)
+                    .shadow(color: Color.black.opacity(0.3), radius: 2, x: 0, y: 1)
             )
             .frame(width: captureRect.width, height: captureRect.height)
             .position(x: captureRect.midX, y: captureRect.midY)
+
+            // Styled corner brackets with rounded corners and line caps (drawn on top)
+            styledBracket(at: .topLeft)
+            styledBracket(at: .topRight)
+            styledBracket(at: .bottomLeft)
+            styledBracket(at: .bottomRight)
             
             // Center crosshair for aiming
             Path { path in
@@ -74,6 +99,7 @@ struct ResizableBracketsView: View {
                 }
                 .onEnded { _ in
                     activeCorner = nil
+                    onDragEnded?(captureRect)
                 }
         )
         .disabled(isResizingDisabled)
@@ -120,6 +146,7 @@ struct ResizableBracketsView: View {
         
         return BracketShape(corner: corner, length: bracketLength, cornerRadius: 8.0)
             .stroke(Color.white, style: StrokeStyle(lineWidth: bracketWidth, lineCap: .round, lineJoin: .round))
+            .shadow(color: Color.black.opacity(0.25), radius: 2, x: 0, y: 1)
             .frame(width: bracketLength * 2, height: bracketLength * 2)
             .position(position)
     }

@@ -214,7 +214,7 @@ private struct PlanCardSection: View {
                 plan: .weekly,
                 title: "Weekly PRO", 
                 priceText: "\(iap.priceText(for: .weekly))/week",
-                subtitle: "Perfect for short-term projects",
+                subtitle: "Great for homework & exams",
                 badge: nil,
                 isSelected: vm.selectedPlan == .weekly,
                 onSelect: { vm.selectedPlan = .weekly }
@@ -340,11 +340,11 @@ private struct PaywallContinueButton: View {
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white)
                     
-                    if vm.selectedPlan == .yearly {
-                        Text("Save 70% with Annual Plan")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.white.opacity(0.8))
-                    }
+                    // if vm.selectedPlan == .yearly {
+                    //     Text("Save 70% with Annual Plan")
+                    //         .font(.system(size: 12, weight: .medium))
+                    //         .foregroundColor(.white.opacity(0.8))
+                    // }
                 }
                 Image(systemName: "arrow.right")
                     .font(.system(size: 16, weight: .semibold))
@@ -407,14 +407,15 @@ private struct LegalTextView: View {
                 .padding(.horizontal, 20)
             
             HStack(spacing: 20) {
-                Link("Terms of Service", destination: URL(string: "https://verby.co/phototopdf")!)
+                Link("Terms of Service", destination: URL(string: "https://verby.co/math")!)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.accentColor)
                 
-                Link("Privacy Policy", destination: URL(string: "https://verby.co/phototopdf/privacy")!)
+                Link("Privacy Policy", destination: URL(string: "https://verby.co/math/privacy")!)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.accentColor)
             }
+            
         }
     }
 } 

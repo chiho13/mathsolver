@@ -9,6 +9,14 @@ struct ImageWithBracketView: View {
     @State private var currentImageScale: CGFloat = 1.0
     @GestureState private var gestureImageScale: CGFloat = 1.0
     @GestureState private var gestureImageOffset: CGSize = .zero
+    
+    // Separate capture rect for image view that doesn't affect camera view
+    @State private var imageCaptureRect: CGRect = CGRect(
+        x: UIScreen.main.bounds.width * 0.06,
+        y: UIScreen.main.bounds.height * 0.4,
+        width: UIScreen.main.bounds.width * 0.88,
+        height: UIScreen.main.bounds.width * 0.88 * 0.5
+    )
 
     var body: some View {
         ZStack {
@@ -51,22 +59,26 @@ struct ImageWithBracketView: View {
             .clipped() // Ensure clipping is applied to the GeometryReader
             .ignoresSafeArea(.all)
 
-            // Brackets view
+            // Brackets view - using separate capture rect (completely independent)
             ResizableBracketsView(
-                captureRect: $captureRect,
+                captureRect: $imageCaptureRect,
                 screenBounds: UIScreen.main.bounds,
-                isResizingDisabled: true,
+                isResizingDisabled: false,
                 initialWidth: UIScreen.main.bounds.width * 0.88
             )
 
             // Use overlay to prevent layout impact from DotsAndScanAnimationView
-        DotsAndScanAnimationView(captureRect: captureRect, isAnimating: isAnimatingCroppedArea)
+        DotsAndScanAnimationView(captureRect: imageCaptureRect, isAnimating: isAnimatingCroppedArea)
                 .opacity(showDotsView ? 1 : 0)
                 .allowsHitTesting(false)
                 .zIndex(1)
                 
         }
         .animation(nil, value: showDotsView) // Disable implicit animations for showDotsView
+        .onAppear {
+            // Initialize image capture rect with current capture rect
+            imageCaptureRect = captureRect
+        }
         .onChange(of: isAnimatingCroppedArea) { _, isAnimating in
             if isAnimating {
                 showDotsView = true

@@ -36,6 +36,7 @@ struct DotsAndScanAnimationView: View {
                             .frame(width: dotSize, height: dotSize)
                             .opacity(0.9)
                             .scaleEffect(dotScales[index] * (1.0 + 0.3 * abs(sin(animationPhases[index]))))
+                            .shadow(color: Color.black.opacity(0.25), radius: 2, x: 0, y: 1)
                             .position(dotPositions[index])
                             .animation(.none, value: dotPositions[index])
                     }
