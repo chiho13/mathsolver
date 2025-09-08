@@ -39,18 +39,18 @@ struct OnboardingView: View {
                     //     .fill(Color.gray.opacity(0.15))
                     //     .frame(height: 8)
                     
-                    // Progress bar
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(LinearGradient(
-                            gradient: Gradient(colors: [
-                                colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor,
-                                colorScheme == .dark ? Color.fromHex("#f7cbe3").opacity(0.7) : Color.accentColor.opacity(0.8)
-                            ]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ))
-                        .frame(width: geometry.size.width * (CGFloat(currentIndex + 1) / CGFloat(pages.count)), height: 8)
-                        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: currentIndex)
+                    // // Progress bar
+                    // RoundedRectangle(cornerRadius: 4)
+                    //     .fill(LinearGradient(
+                    //         gradient: Gradient(colors: [
+                    //             colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor,
+                    //             colorScheme == .dark ? Color.fromHex("#f7cbe3").opacity(0.7) : Color.accentColor.opacity(0.8)
+                    //         ]),
+                    //         startPoint: .leading,
+                    //         endPoint: .trailing
+                    //     ))
+                    //     .frame(width: geometry.size.width * (CGFloat(currentIndex + 1) / CGFloat(pages.count)), height: 8)
+                    //     .animation(.spring(response: 0.6, dampingFraction: 0.8), value: currentIndex)
                 }
             }
             .frame(height: 8)

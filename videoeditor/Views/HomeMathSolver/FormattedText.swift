@@ -277,6 +277,8 @@ struct FormattedText: View {
                 configuration.label
                     .lineSpacing(5)
                     .markdownMargin(bottom: 12)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
             }
             .listItem { configuration in
                 configuration.label
@@ -293,9 +295,12 @@ struct FormattedText: View {
             .paragraph { configuration in
                 configuration.label
                     .fixedSize(horizontal: false, vertical: true) // Allow Markdown to take its natural height
+                    .multilineTextAlignment(.leading)
             }
             .listItem { configuration in
-                configuration.label // Use MarkdownUI's default list item behavior for inline context
+                configuration.label
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
             }
     }
 
@@ -306,6 +311,8 @@ struct FormattedText: View {
                 if !section.title.isEmpty {
                     Markdown(section.title)
                         .markdownTheme(markdownTheme)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 20) // Apply horizontal padding to align with content blocks
                 }
                 
@@ -321,6 +328,8 @@ struct FormattedText: View {
                                         case .markdown:
                                             Markdown(part.value)
                                                 .markdownTheme(inlineMarkdownTheme)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .fixedSize(horizontal: false, vertical: true)
                                         case .inlineLatex:
                                             MathLabel(latex: part.value, mode: .text)
                                                 .fixedSize(horizontal: false, vertical: true)

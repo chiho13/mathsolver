@@ -34,6 +34,7 @@ struct videoeditorApp: App {
     
 
     @StateObject private var iapManager = IAPManager()
+    @StateObject private var creditManager = CreditManager()
     
     @State private var showPremView: Bool = false
 
@@ -57,6 +58,7 @@ struct videoeditorApp: App {
                 } else {
                     ContentView()
                         .environmentObject(iapManager)
+                        .environmentObject(creditManager)
 //                        .environment(\.locale, Locale(identifier: "zh-Hant"))
 
                 }

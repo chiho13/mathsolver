@@ -26,10 +26,12 @@ struct PaywallView: View {
 //                    ValuePropositionView()
 
                     PlanCardSection()
+                        .environmentObject(vm)
 
                     PaywallContinueButton(action: {
                         await vm.purchase(iap: iap)
                     }, isDisabled: vm.isPurchasing)
+                    .environmentObject(vm)
 
                     AuxButtonsBar(isDisabled: vm.isPurchasing, restoreAction: {
                         Task { await vm.restore(iap: iap) }
@@ -119,7 +121,7 @@ private struct HeaderView: View {
 }
 
 private struct PaywallBenefitsView: View {
-    private let benefits: [String] = ["paywall-bulletpointone", "paywall-bulletpointhree", "paywall-bulletpointfour"]
+    private let benefits: [String] = ["paywall-bulletpointhree", "paywall-bulletpointone", "paywall-bulletpointfour"]
     
     var body: some View {
         VStack(spacing: 16) {
@@ -170,101 +172,162 @@ private struct ValuePropositionView: View {
 
 private struct PlanCardSection: View {
     @EnvironmentObject private var iap: IAPManager
+    @EnvironmentObject private var vm: PaywallVM
+
+    private var savingsText: String {
+        guard let yearlyPrice = iap.getPrice(for: .yearly),
+              let weeklyPrice = iap.getPrice(for: .weekly) else {
+            return "Best value - save 70%"
+        }
+        
+        let yearlyPriceDouble = NSDecimalNumber(decimal: yearlyPrice).doubleValue
+        let weeklyPriceDouble = NSDecimalNumber(decimal: weeklyPrice).doubleValue
+        
+        let totalWeeklyCostForYear = weeklyPriceDouble * 52
+        if totalWeeklyCostForYear <= yearlyPriceDouble {
+            return "Best value - save 70%"
+        }
+        
+        let savings = totalWeeklyCostForYear - yearlyPriceDouble
+        let percentage = (savings / totalWeeklyCostForYear) * 100
+        
+        if percentage.isNaN || percentage.isInfinite || percentage <= 0 {
+            return "Best value - save 70%"
+        }
+        
+        return "Best value - save \(Int(percentage.rounded()))%"
+    }
 
     var body: some View {
-        VStack(spacing: 16) {
-            PlanCard(
+        VStack(spacing: 12) {
+            PaywallPlanRow(
+                plan: .yearly,
                 title: "Annual PRO",
                 priceText: "\(iap.priceText(for: .yearly))/year",
+                subtitle: savingsText,
                 badge: "BEST VALUE",
-                subtitle: "Full access to all features"
+                isSelected: vm.selectedPlan == .yearly,
+                onSelect: { vm.selectedPlan = .yearly }
+            )
+            
+            PaywallPlanRow(
+                plan: .weekly,
+                title: "Weekly PRO", 
+                priceText: "\(iap.priceText(for: .weekly))/week",
+                subtitle: "Perfect for short-term projects",
+                badge: nil,
+                isSelected: vm.selectedPlan == .weekly,
+                onSelect: { vm.selectedPlan = .weekly }
             )
         }
         .padding(.horizontal, 20)
     }
 }
 
-private struct PlanCard: View {
+private struct PaywallPlanRow: View {
+    let plan: SubscriptionPlan
     let title: String
     let priceText: String
-    let badge: String?
     let subtitle: String
+    let badge: String?
+    let isSelected: Bool
+    let onSelect: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 6) {
+        Button(action: onSelect) {
+            HStack(spacing: 16) {
+                // Radio button
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(isSelected ? .accentColor : .gray)
+                
+                VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(title)
-                            .font(.system(size: 22, weight: .bold))
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.primary)
                         
                         Spacer()
                         
-                        // if let badge {
-                        //     Text(badge)
-                        //         .font(.system(size: 12, weight: .bold))
-                        //         .foregroundColor(.white)
-                        //         .padding(.horizontal, 12)
-                        //         .padding(.vertical, 4)
-                        //         .background(
-                        //             LinearGradient(
-                        //                 gradient: Gradient(colors: [Color.orange, Color.red]),
-                        //                 startPoint: .leading,
-                        //                 endPoint: .trailing
-                        //             )
-                        //         )
-                        //         .clipShape(Capsule())
-                        // }
+                        if let badge = badge {
+                            Text(badge)
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [Color.orange, Color.red]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .clipShape(Capsule())
+                        }
                     }
                     
                     Text(subtitle)
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                     
-                    HStack(alignment: .bottom, spacing: 4) {
-                        Text(priceText)
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.accentColor)
-                        
-                        // Text("billed annually")
-                        //     .font(.system(size: 12))
-                        //     .foregroundColor(.secondary)
-                        //     .offset(y: -2)
-                    }
+                    Text(priceText)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.accentColor)
                 }
                 
                 Spacer()
             }
-        }
-        .padding(24)
-        .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [Color.accentColor.opacity(0.05), Color.accentColor.opacity(0.1)]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isSelected ? 
+                        LinearGradient(
+                            colors: [Color.accentColor.opacity(0.15), Color.accentColor.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ) : 
+                        LinearGradient(
+                            colors: [
+                                colorScheme == .dark ? Color.gray.opacity(0.1) : Color.white,
+                                colorScheme == .dark ? Color.gray.opacity(0.1) : Color.white
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
             )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(
-                    LinearGradient(
-                        gradient: Gradient(colors: [Color.accentColor, Color.accentColor.opacity(0.6)]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 2
-                )
-        )
-        .cornerRadius(16)
-        .shadow(color: .accentColor.opacity(0.2), radius: 8, x: 0, y: 4)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        isSelected ? 
+                            LinearGradient(
+                                colors: [Color.accentColor, Color.accentColor.opacity(0.6)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ) :
+                            LinearGradient(
+                                colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.3)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                        lineWidth: isSelected ? 2 : 1
+                    )
+            )
+            .shadow(color: isSelected ? Color.accentColor.opacity(0.2) : Color.clear, radius: 8, x: 0, y: 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
 private struct PaywallContinueButton: View {
     let action: () async -> Void
     let isDisabled: Bool
+    @EnvironmentObject private var vm: PaywallVM
+    @EnvironmentObject private var iap: IAPManager
     
     var body: some View {
         Button(action: {
@@ -272,9 +335,17 @@ private struct PaywallContinueButton: View {
         }) {
             HStack {
                 Spacer()
-                Text("Start Now")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
+                VStack(spacing: 2) {
+                    Text("Subscribe Now")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
+                    
+                    if vm.selectedPlan == .yearly {
+                        Text("Save 70% with Annual Plan")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                }
                 Image(systemName: "arrow.right")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
@@ -316,10 +387,20 @@ private struct AuxButtonsBar: View {
 private struct LegalTextView: View {
     let selectedPlan: SubscriptionPlan
     @EnvironmentObject private var iap: IAPManager
+    
+    private var renewalPeriod: String {
+        switch selectedPlan {
+        case .weekly:
+            return "per week"
+        case .yearly:
+            return "per year"
+        }
+    }
+    
     var body: some View {
         let price = iap.priceText(for: selectedPlan)
         VStack(spacing: 12) {
-            Text("This subscription automatically renews for \(price) per year. Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase.")
+            Text("This subscription automatically renews for \(price) \(renewalPeriod). Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase.")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

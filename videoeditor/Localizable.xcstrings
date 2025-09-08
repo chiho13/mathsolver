@@ -333,7 +333,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "AI Text Recognition"
+            "value" : "Unlimited Scans"
           }
         }
       }
@@ -422,6 +422,9 @@
     "Restore Purchases" : {
 
     },
+    "Save 70% with Annual Plan" : {
+
+    },
     "Search for places, news, or tips..." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -503,7 +506,7 @@
         }
       }
     },
-    "Start Now" : {
+    "Subscribe Now" : {
 
     },
     "Success" : {
@@ -567,13 +570,20 @@
         }
       }
     },
+    "This subscription automatically renews for %@ %@. Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "This subscription automatically renews for %1$@ %2$@. Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase."
+          }
+        }
+      }
+    },
     "This subscription automatically renews for %@ per week. You can cancel anytime. By subscribing, you agree to the" : {
 
     },
     "This subscription automatically renews for %@ per year after 7 day trial. You can cancel anytime. By subscribing, you agree to the" : {
-
-    },
-    "This subscription automatically renews for %@ per year. Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase." : {
 
     },
     "This will delete all search history" : {

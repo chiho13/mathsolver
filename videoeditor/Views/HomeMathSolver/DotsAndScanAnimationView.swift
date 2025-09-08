@@ -138,10 +138,21 @@ struct DotsAndScanAnimationView: View {
         scanLineOffset = -scanLineWidth / 2
         scanLineOpacity = 1.0
         generateRandomPositions()
-        withAnimation(.linear(duration: 0.4)) {
+        
+        let scanDuration: Double = 0.4
+        withAnimation(.linear(duration: scanDuration)) {
             scanLineOffset = captureRect.width + scanLineWidth / 2
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        
+        // Start fade-out slightly before scan completes for smoother transition
+        DispatchQueue.main.asyncAfter(deadline: .now() + scanDuration - 0.1) {
+            withAnimation(.easeOut(duration: 0.15)) {
+                scanLineOpacity = 0.0
+            }
+        }
+        
+        // Transition to dots when scan completes
+        DispatchQueue.main.asyncAfter(deadline: .now() + scanDuration) {
             showScanLine = false
             showDots = true
             startDotLifecycleAnimation()

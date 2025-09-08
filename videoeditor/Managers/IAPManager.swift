@@ -166,10 +166,10 @@ class IAPManager: ObservableObject {
         return !planProducts.isEmpty
     }
     
-//    func getPrice(for plan: SubscriptionPlan) -> Decimal? {
-//        guard let product = planProducts[plan] else { return 0.00 }
-//          return product.price
-//    }
+    func getPrice(for plan: SubscriptionPlan) -> Decimal? {
+        guard let product = planProducts[plan] else { return nil }
+        return product.price
+    }
     
 //    func getCurrencyCode(for plan: SubscriptionPlan) -> String? {
 //        guard let product = planProducts[plan] else { return "" }

@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var errorMessage: String? = nil
     @State private var showPremiumView: Bool = false
     @EnvironmentObject private var iap: IAPManager
+    @EnvironmentObject private var creditManager: CreditManager
     @State private var isCameraAuthorized: Bool = false
     @State private var croppedImage: UIImage? = nil
     @State private var originalImage: UIImage? = nil
@@ -209,17 +210,26 @@ struct ContentView: View {
                                                     .animation(.easeInOut(duration: 0.2), value: isCaptureButtonPressed)
                                                 }
                                             }
-                                            .onTapGesture {
-                                                // Step 1: User presses shutter button
-                                                if !viewModel.isAnimatingShutter && !viewModel.isAnimatingCroppedArea {
-                                                    viewModel.isAnimatingShutter = true
-                                                    // Step 2: Show spinner, trigger capture
-                                                    triggerCapture = true
-                                                }
-                                            }
-                                            .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-                                                isCaptureButtonPressed = pressing
-                                            }, perform: {})
+                            .onTapGesture {
+                                // Step 1: Check if user is premium first, then credits
+                                if !viewModel.isAnimatingShutter && !viewModel.isAnimatingCroppedArea {
+                                    if iap.isPremium || creditManager.canUseMathSolver() {
+                                        // Deduct credit here since user is initiating the solve action
+                                        if !iap.isPremium {
+                                            let _ = creditManager.useCredit()
+                                        }
+                                        viewModel.isAnimatingShutter = true
+                                        // Step 2: Show spinner, trigger capture
+                                        triggerCapture = true
+                                    } else {
+                                        // No credits left and not premium, show premium view
+                                        showPremiumView = true
+                                    }
+                                }
+                            }
+                            .onLongPressGesture(minimumDuration: 0.1, maximumDistance: .infinity, pressing: { pressing in
+                                isCaptureButtonPressed = pressing
+                            }, perform: {})
                                             
                                             // Torch button on the right
                                             Button(action: {
@@ -286,18 +296,29 @@ struct ContentView: View {
     }
     
             Button(action: {
-            // Crop the image and process it
-            if let image = selectedPhotoImage {
-                let _croppedImage = cropImage(image: image, rect: captureRect, offset: imageOffset)
-                if let croppedImage = _croppedImage {
-                    viewModel.selectedImage = croppedImage
-                    viewModel.isAnimatingCroppedArea = true // Trigger dot animation
+            // Check if user is premium first, then credits before processing
+            if iap.isPremium || creditManager.canUseMathSolver() {
+                // Deduct credit here since user is initiating the solve action
+                if !iap.isPremium {
+                    let _ = creditManager.useCredit()
+                }
+                
+                // Crop the image and process it
+                if let image = selectedPhotoImage {
+                    let _croppedImage = cropImage(image: image, rect: captureRect, offset: imageOffset)
+                    if let croppedImage = _croppedImage {
+                        viewModel.selectedImage = croppedImage
+                        viewModel.isAnimatingCroppedArea = true // Trigger dot animation
 
-                    
-                    Task {
-                        await viewModel.solveMathProblem() // Send to backend
+                        
+                        Task {
+                            await viewModel.solveMathProblem(deductCredit: false) // Send to backend
+                        }
                     }
                 }
+            } else {
+                // No credits left and not premium, show premium view
+                showPremiumView = true
             }
             // Reset photo and go back to camera
     //         withAnimation(.easeInOut(duration: 0.3)) {
@@ -324,6 +345,8 @@ struct ContentView: View {
             .onAppear {
                 checkCameraAuthorization()
                 checkTorchStatus()
+                // Set credit manager reference in view model
+                viewModel.creditManager = creditManager
                 NotificationCenter.default.addObserver(forName: NSNotification.Name("ShowPremiumView"), object: nil, queue: .main) { _ in
                     showPremiumView = true
                 }
@@ -425,19 +448,36 @@ struct ContentView: View {
             .toolbar {
                 if iap.didCheckPremium && !iap.isPremium {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.1)) {
-                                showPremiumView = true
-                            }
-                        }) {
-                            Text("Upgrade")
-                                .font(.system(size: 16, weight: .medium))
+                        HStack(spacing: 8) {
+                            // Credit counter next to upgrade button
+                            Text(creditManager.creditDisplayText())
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.white)
-                                .padding(8)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
                                 .background(
-                                    LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .leading, endPoint: .trailing)
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .fill(creditManager.hasCredits ? 
+                                              LinearGradient(colors: [Color.green.opacity(0.9), Color.green.opacity(0.7)], startPoint: .top, endPoint: .bottom) : 
+                                              LinearGradient(colors: [Color.red.opacity(0.9), Color.red.opacity(0.7)], startPoint: .top, endPoint: .bottom))
+                                        .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
                                 )
-                                .cornerRadius(8)
+                            
+                            // Upgrade button
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.1)) {
+                                    showPremiumView = true
+                                }
+                            }) {
+                                Text("Upgrade")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .padding(8)
+                                    .background(
+                                        LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .leading, endPoint: .trailing)
+                                    )
+                                    .cornerRadius(8)
+                            }
                         }
                         .padding(.top, 8)
                         .padding(.bottom, 8)

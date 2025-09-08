@@ -1,0 +1,145 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "1BA358F0",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6752255824",
+    "_developerTeamID" : "CYL68JMKHB",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 779040867.73241401,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21776092",
+      "localizations" : [
+
+      ],
+      "name" : "Premium Plans",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "8.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6752257439",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Renewable after 1 week",
+              "displayName" : "Weekly Plan",
+              "locale" : "en_GB"
+            }
+          ],
+          "productID" : "weekly.math",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "Weekly Plan",
+          "subscriptionGroupID" : "21776092",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "49.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6752257114",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Renewable after 1 year",
+              "displayName" : "Yearly Plan",
+              "locale" : "en_GB"
+            }
+          ],
+          "productID" : "yearly.math",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Yearly Plan",
+          "subscriptionGroupID" : "21776092",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

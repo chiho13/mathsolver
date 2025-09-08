@@ -42,6 +42,9 @@ class VisionViewModel: ObservableObject {
     
     private let visionService = VisionService()
     
+    // Credit manager reference (will be set from ContentView)
+    var creditManager: CreditManager?
+    
     // MARK: - Public Methods
     
     /// Performs an asynchronous vision request to the backend.
@@ -77,7 +80,7 @@ class VisionViewModel: ObservableObject {
     
     /// Performs math problem solving with automatic detection
     @MainActor
-    func solveMathProblem() async {
+    func solveMathProblem(deductCredit: Bool = true) async {
         guard let image = selectedImage else {
             errorMessage = "Please select an image first."
             return
@@ -93,6 +96,11 @@ class VisionViewModel: ObservableObject {
             let response = try await visionService.solveMathProblem(image: image)
             print("Vision Response (Math): \(response)")
             self.visionResponse = response
+            
+            // Only consume credit if the request was successful, we have a credit manager, and credit deduction is requested
+            if deductCredit, let creditManager = creditManager {
+                let _ = creditManager.useCredit()
+            }
         } catch let error as VisionError {
             self.errorMessage = self.handleVisionError(error)
         } catch {

@@ -51,18 +51,49 @@ class VisionService: ObservableObject {
         4. Use proper mathematical notation and formatting.
         5. If NO mathematical content is found, respond with exactly: NOMATH.
         
-        FORMATTING RULES:
-        - Use Markdown formatting.
-        - For step-by-step solutions, use Markdown H2 headings for each step (e.g., ## Step 1).
-        - When presenting the final answer, bold the introductory text (e.g., "**Final Answer:**"), but do NOT wrap the LaTeX formula itself in asterisks.
-        - CRITICAL: You MUST use LaTeX for all math. For inline math, use single dollar signs ($...$). For block equations, use double dollar signs ($$...$$).
-        - Under no circumstances use \\[...\\] or \\(...\\) syntax. Only use $...$ and $$...$$. This is a strict requirement.
-        - Do NOT use the \\boxed{} command.
-        - Do NOT use colons at the end of a line to introduce a math formula. Instead, use a complete sentence.
+        CRITICAL LATEX FORMATTING REQUIREMENTS - READ THIS CAREFULLY:
         
-        EXAMPLES:
-        - Simple: "The answer is **42**."
-        - Complex: "## Step 1\nFirst, we write down the equation from the image.\n$$2x = 4$$\n\n## Step 2\nThen, we solve for x by dividing both sides by 2.\n$$x = 2$$\n\n**Final Answer:**\nThe final solution is $$x=2$$."
+        ⚠️ MATH DELIMITERS - ONLY USE THESE TWO FORMATS:
+        • For inline math: $math goes here$
+        • For block math: $$math goes here$$
+        
+        ❌ NEVER USE THESE (THEY BREAK THE APP):
+        • \\(math\\) - FORBIDDEN
+        • \\[math\\] - FORBIDDEN 
+        • Any other delimiters - FORBIDDEN
+        
+        ✅ CORRECT EXAMPLES:
+        • "The variable $x$ represents..." (inline)
+        • "We solve: $$x^2 + 2x + 1 = 0$$" (block)
+        
+        ❌ WRONG EXAMPLES (DO NOT USE):
+        • "The variable \\(x\\) represents..." 
+        • "We solve: \\[x^2 + 2x + 1 = 0\\]"
+        
+        FORMATTING RULES:
+        - Use Markdown formatting for text structure
+        - Use ## Step 1, ## Step 2, etc. for step-by-step solutions
+        - Bold final answer introductions: "**Final Answer:**"
+        - Do NOT use \\boxed{} command
+        - Do NOT use colons to introduce formulas
+        
+        EXAMPLE RESPONSE FORMAT:
+        ## Step 1
+        
+        Rewrite the integral by distributing $x^{-1/2}$ inside:
+        
+        $$\\int \\frac{4x^2 + 1}{2\\sqrt{x}} dx = \\frac{1}{2} \\int (4x^{3/2} + x^{-1/2}) dx$$
+        
+        ## Step 2
+        
+        Integrate each term. For $4x^{3/2}$:
+        
+        $$\\int 4x^{3/2} dx = \\frac{8}{5} x^{5/2}$$
+        
+        **Final Answer:**
+        The integral equals $$\\frac{4}{5} x^{5/2} + x^{1/2} + C$$
+        
+        Remember: ONLY use $ and $$ for math. Never use \\( or \\[.
         
         Analyze the image now:
         """

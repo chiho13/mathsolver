@@ -9,7 +9,7 @@
       }
     ]
   },
-  "identifier" : "72741A8A",
+  "identifier" : "845427A7",
   "nonRenewingSubscriptions" : [
 
   ],
@@ -17,10 +17,10 @@
 
   ],
   "settings" : {
-    "_applicationInternalID" : "6748277988",
+    "_applicationInternalID" : "6751777634",
     "_developerTeamID" : "CYL68JMKHB",
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 773698988.23645902,
+    "_lastSynchronizedDate" : 779037157.10942996,
     "_locale" : "en_US",
     "_storefront" : "USA",
     "_storeKitErrors" : [
@@ -73,46 +73,63 @@
   },
   "subscriptionGroups" : [
     {
-      "id" : "21726017",
+      "id" : "21775300",
       "localizations" : [
 
       ],
-      "name" : "Photo to PDF subs",
+      "name" : "Premium",
       "subscriptions" : [
         {
           "adHocOffers" : [
 
           ],
           "codeOffers" : [
-            {
-              "displayPrice" : "1.99",
-              "eligibility" : [
-                "new"
-              ],
-              "internalID" : "B47B2F58",
-              "isStackable" : true,
-              "numberOfPeriods" : 1,
-              "paymentMode" : "payAsYouGo",
-              "referenceName" : "80% off",
-              "subscriptionPeriod" : "P1Y"
-            }
+
           ],
-          "displayPrice" : "12.99",
+          "displayPrice" : "49.99",
           "familyShareable" : false,
           "groupNumber" : 1,
-          "internalID" : "6748278097",
+          "internalID" : "6752228196",
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "Renews Yearly",
-              "displayName" : "Photo to PDF Yearly",
-              "locale" : "en_GB"
+              "description" : "Renewable after 1 year",
+              "displayName" : "Yearly Plan",
+              "locale" : "en_US"
             }
           ],
-          "productID" : "editor.yearly",
+          "productID" : "yearly.mathsolver",
           "recurringSubscriptionPeriod" : "P1Y",
-          "referenceName" : "yearly",
-          "subscriptionGroupID" : "21726017",
+          "referenceName" : "Annual PRO",
+          "subscriptionGroupID" : "21775300",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "9.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6752252009",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Renewable after 1 week",
+              "displayName" : "Weekly Plan",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "weekly.mathsolver",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "Weekly PRO",
+          "subscriptionGroupID" : "21775300",
           "type" : "RecurringSubscription",
           "winbackOffers" : [
 
