@@ -284,13 +284,13 @@ struct ContentView: View {
         selectedPhotoImage = nil
         imageOffset = .zero // Reset offset for next use
     }) {
-        Text("Cancel")
+        Text("Back")
             .font(.system(size: 18, weight: .semibold))
             .foregroundColor(.white)
             .frame(width: 100, height: 50)
             .background(
                 RoundedRectangle(cornerRadius: 25)
-                    .fill(Color.red.opacity(0.9))
+                    .fill(Color.gray.opacity(0.2))
                     .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
             )
     }
@@ -414,8 +414,18 @@ struct ContentView: View {
                  dragOffsetY = 0
                 shouldAnimateImagePosition = false
                 selectedDetent = .fraction(0.6)
-                // selectedPhotoImage = nil
-                //  imageOffset = .zero
+                selectedPhotoImage = nil
+                imageOffset = .zero
+                
+                // Reset captureRect to its initial state
+                let screenBounds = UIScreen.main.bounds
+                let screenWidth = screenBounds.width
+                let screenHeight = screenBounds.height
+                let rectWidth = screenWidth * 0.85
+                let rectHeight: CGFloat = 120.0
+                let rectX = (screenWidth - rectWidth) / 2.0
+                let rectY = (screenHeight - rectHeight) / 2.0 - 40.0
+                captureRect = CGRect(x: rectX, y: rectY, width: rectWidth, height: rectHeight)
             }) {
                 SolutionSheetView(showSolutionSheet: $showSolutionSheet, visionResponse: viewModel.visionResponse, errorMessage: viewModel.errorMessage, selectedDetent: $selectedDetent, dragOffset: $dragOffsetY)
             }

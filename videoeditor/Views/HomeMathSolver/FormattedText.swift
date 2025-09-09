@@ -176,7 +176,7 @@ struct FormattedText: View {
     }
 
     /// Parses the input text into an array of `ContentPart`s.
-    private func parseContentToParts(from textToParse: String) -> [ContentPart] {
+    private static func parseContentToParts(from textToParse: String) -> [ContentPart] {
         var parts: [ContentPart] = []
         var lastEnd: String.Index = textToParse.startIndex
         
@@ -229,7 +229,7 @@ struct FormattedText: View {
         return parts
     }
 
-    private func parseText(from textToParse: String) {
+    private static func parseText(from textToParse: String) -> [ContentSection] {
         var parsedSections: [ContentSection] = []
         
         // Split by "##" that follows a newline, ensuring we capture the "##" as part of the title.
@@ -241,7 +241,7 @@ struct FormattedText: View {
             
             if index == 0 && !component.hasPrefix("## ") {
                 // This is the initial content before the first heading, or the whole text if no headings.
-                let contentParts = parseContentToParts(from: component)
+                let contentParts = FormattedText.parseContentToParts(from: component)
                 if !contentParts.isEmpty {
                     parsedSections.append(ContentSection(title: "", parts: contentParts))
                 }
@@ -250,12 +250,12 @@ struct FormattedText: View {
                 let title = String(lines.first ?? "")
                 let content = lines.count > 1 ? String(lines.dropFirst().joined(separator: "\n")) : ""
                 
-                let contentParts = parseContentToParts(from: content)
+                let contentParts = FormattedText.parseContentToParts(from: content)
                 parsedSections.append(ContentSection(title: title, parts: contentParts))
             }
         }
 
-        self.sections = parsedSections
+        return parsedSections
     }
     
     // A custom theme for Markdown rendering to ensure consistency and style.
@@ -305,67 +305,92 @@ struct FormattedText: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            ForEach(sections, id: \.self) { section in
-                // Render section title if it exists
-                if !section.title.isEmpty {
-                    Markdown(section.title)
-                        .markdownTheme(markdownTheme)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 20) // Apply horizontal padding to align with content blocks
-                }
-                
-                let groupedParts = groupParts(from: section.parts)
-                
-                if !groupedParts.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(groupedParts, id: \.self) { group in
-                            if group.isInline {
-                                FlowLayout(spacing: 4) {
-                                    ForEach(group.parts, id: \.self) { part in
-                                        switch part.type {
-                                        case .markdown:
-                                            Markdown(part.value)
-                                                .markdownTheme(inlineMarkdownTheme)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                                .fixedSize(horizontal: false, vertical: true)
-                                        case .inlineLatex:
-                                            MathLabel(latex: part.value, mode: .text)
-                                                .fixedSize(horizontal: false, vertical: true)
-                                        default:
-                                            EmptyView()
+        ZStack {
+            if isRendered && !sections.isEmpty {
+                VStack(alignment: .leading, spacing: 16) {
+                    ForEach(sections, id: \.self) { section in
+                        // Render section title if it exists
+                        if !section.title.isEmpty {
+                            Markdown(section.title)
+                                .markdownTheme(markdownTheme)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.horizontal, 20) // Apply horizontal padding to align with content blocks
+                        }
+
+                        let groupedParts = groupParts(from: section.parts)
+
+                        if !groupedParts.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(groupedParts, id: \.self) { group in
+                                    if group.isInline {
+                                        FlowLayout(spacing: 4) {
+                                            ForEach(group.parts, id: \.self) { part in
+                                                switch part.type {
+                                                case .markdown:
+                                                    Markdown(part.value)
+                                                        .markdownTheme(inlineMarkdownTheme)
+                                                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                                                case .inlineLatex:
+                                                    MathLabel(latex: part.value, mode: .text)
+
+                                                default:
+                                                    EmptyView()
+                                                }
+                                            }
                                         }
+                                    } else {
+                                        // Block LaTeX is centered
+                                        let part = group.parts.first!
+                                        MathLabel(latex: part.value, mode: .display)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                            .frame(maxWidth: .infinity, alignment: .center)
+                                            .padding(.vertical, 10)
                                     }
                                 }
-                            } else {
-                                // Block LaTeX is centered
-                                let part = group.parts.first!
-                                MathLabel(latex: part.value, mode: .display)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                    .padding(.vertical, 10)
                             }
+                            .padding(20)
+                            .background(Color(.systemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                            )
                         }
                     }
-                    .padding(20)
-                    .background(Color(.systemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                    )
                 }
             }
+
+            if !isRendered {
+                GradientSpinner()
+            }
         }
-        .opacity(isRendered ? 1 : 0)
         .task(id: text) {
-            isRendered = false
-            parseText(from: text)
+            // Clear sections and ensure spinner is shown
+            await MainActor.run {
+                self.sections = []
+                self.isRendered = false
+            }
+
+            // Perform parsing in the background to avoid blocking the main thread
+            let newSections = await Task.detached {
+                FormattedText.parseText(from: text)
+            }.value
+
+            // Update the state on the main thread
+            await MainActor.run {
+                self.sections = newSections
+            }
+
             // A short delay to allow the view hierarchy to update before fading in
             try? await Task.sleep(nanoseconds: 50_000_000) // 0.05 seconds
-            withAnimation {
-                isRendered = true
+
+            // Animate the transition to the rendered state
+            await MainActor.run {
+                withAnimation {
+                    self.isRendered = true
+                }
             }
         }
     }

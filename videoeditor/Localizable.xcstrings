@@ -60,6 +60,9 @@
         }
       }
     },
+    "Back" : {
+
+    },
     "Best Deal" : {
       "extractionState" : "manual",
       "localizations" : {
