@@ -18,7 +18,7 @@ class CreditManager: ObservableObject {
     private let firstLaunchKey = "creditFirstLaunch"
     
     // Configuration
-    private let initialCredits = 3 // Give users 3 free math solutions
+    private let initialCredits = 2 // Give users 3 free math solutions
     
     init() {
         loadCredits()
