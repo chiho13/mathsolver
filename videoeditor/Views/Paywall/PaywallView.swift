@@ -48,15 +48,15 @@ struct PaywallView: View {
                 .edgesIgnoringSafeArea(.top)
 
             // Close button
-            Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.primary.opacity(0.6))
-                    .padding(12)
-                    .background(.thinMaterial, in: Circle())
-            }
-            .padding(.trailing, 16)
-            .padding(.top, 8)
+            // Button(action: onClose) {
+            //     Image(systemName: "xmark")
+            //         .font(.system(size: 20, weight: .semibold))
+            //         .foregroundColor(.primary.opacity(0.6))
+            //         .padding(12)
+            //         .background(.thinMaterial, in: Circle())
+            // }
+            // .padding(.trailing, 16)
+            // .padding(.top, 8)
            
         }
         .alert(item: $vm.activeAlert) { alert in
