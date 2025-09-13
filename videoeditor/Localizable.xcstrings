@@ -88,6 +88,9 @@
         }
       }
     },
+    "Cancel anytime" : {
+
+    },
     "Choose language pairs" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -230,6 +233,9 @@
           }
         }
       }
+    },
+    "No payment now" : {
+
     },
     "OK" : {
       "extractionState" : "manual",
@@ -422,9 +428,6 @@
         }
       }
     },
-    "Restore Purchases" : {
-
-    },
     "Search for places, news, or tips..." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -506,9 +509,6 @@
         }
       }
     },
-    "Subscribe Now" : {
-
-    },
     "Success" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -566,16 +566,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "then"
-          }
-        }
-      }
-    },
-    "This subscription automatically renews for %@ %@. Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "This subscription automatically renews for %1$@ %2$@. Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase."
           }
         }
       }

@@ -23,6 +23,7 @@ class IAPManager: ObservableObject {
     @Published var isPremium: Bool = false
     @Published var activePlan: SubscriptionPlan?  // Add this property
     @Published var didCheckPremium: Bool = false
+    @Published var introductoryOfferEligibility: [String: Bool] = [:]
     
     // Dictionary to map SubscriptionPlan to StoreKit.Product
     var planProducts: [SubscriptionPlan: StoreKit.Product] = [:]
@@ -45,7 +46,18 @@ class IAPManager: ObservableObject {
                         activePlan = plan
                         await transaction.finish()
                         print("\(plan.displayName) transaction updated successfully.")
+                        
+                        // Update free trial eligibility after transaction processing
+                        await checkIntroductoryOfferEligibility()
+                    } else {
+                        // Handle revoked transactions
+                        await checkPremiumStatus()
+                        await checkIntroductoryOfferEligibility()
+                        print("\(plan.displayName) transaction was revoked.")
                     }
+                } else {
+                    // Finish transaction even if it's not one of our recognized products
+                    await transaction.finish()
                 }
             case .unverified(_, let error):
                 print("Transaction update could not be verified: \(error.localizedDescription)")
@@ -60,6 +72,7 @@ class IAPManager: ObservableObject {
         do {
             let fetchedProducts = try await StoreKit.Product.products(for: productIDs)
             self.products = fetchedProducts
+            await checkIntroductoryOfferEligibility()
             print("Fetched products: \(fetchedProducts.map { $0.id })")
             
             // Map products to their respective SubscriptionPlans
@@ -80,7 +93,18 @@ class IAPManager: ObservableObject {
             print("Error fetching products: \(error)")
         }
     }
-    
+
+    func checkIntroductoryOfferEligibility() async {
+        var eligibility: [String: Bool] = [:]
+        for product in products {
+            guard let subscription = product.subscription else { continue }
+            let isEligible = await subscription.isEligibleForIntroOffer
+            eligibility[product.id] = isEligible
+            print("Eligibility for \(product.id): \(isEligible)")
+        }
+        self.introductoryOfferEligibility = eligibility
+    }
+
     // Purchase a specific Subscription Plan
     func purchase(plan: SubscriptionPlan) async -> Bool {
         guard let product = planProducts[plan] else {
@@ -171,6 +195,43 @@ class IAPManager: ObservableObject {
         return product.price
     }
     
+    func introductoryOfferDetails(for plan: SubscriptionPlan) -> String? {
+        guard let product = planProducts[plan],
+              let offer = product.subscription?.introductoryOffer,
+              introductoryOfferEligibility[product.id] ?? false else {
+            return nil
+        }
+
+        switch offer.paymentMode {
+        case .freeTrial:
+            let period = offer.period
+            let periodValue = period.value
+            let unit: String
+            
+            switch period.unit {
+            case .day:
+                unit = "day"
+            case .week:
+                unit = "week"
+            case .month:
+                unit = "month"
+            case .year:
+                unit = "year"
+            default:
+                // If the unit is unknown, return a generic "Free Trial" string.
+                return "Free Trial"
+            }
+            
+            return "\(periodValue)-\(unit) free trial"
+            
+        case .payAsYouGo, .payUpFront:
+            return offer.displayPrice
+            
+        default:
+            return nil
+        }
+    }
+    
 //    func getCurrencyCode(for plan: SubscriptionPlan) -> String? {
 //        guard let product = planProducts[plan] else { return "" }
 //          return planProducts[plan]?.priceLocale.currencyCode
@@ -181,6 +242,7 @@ class IAPManager: ObservableObject {
         do {
             try await AppStore.sync()
             await checkPremiumStatus()
+            await checkIntroductoryOfferEligibility()
             print("Purchases restored successfully.")
         } catch {
             print("Failed to restore purchases: \(error)")

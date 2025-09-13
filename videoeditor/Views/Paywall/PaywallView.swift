@@ -107,12 +107,12 @@ private struct HeaderView: View {
                     Text(NSLocalizedString("paywall-title", comment: ""))
                         .font(.system(size: 28, weight: .bold))
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(LinearGradient(colors: [.white, .white.opacity(0.9)], startPoint: .top, endPoint: .bottom))
+                        .foregroundColor(cs == .dark ? Color.fromHex("#00e17b") : .white)
                     
                     Text("Get Detailed Step by Step Solution")
                         .font(.system(size: 16, weight: .medium))
                         .multilineTextAlignment(.center)
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundColor(cs == .dark ? Color.fromHex("#00e17b").opacity(0.8) : .white.opacity(0.8))
                 }
             }
             .padding(.top, 20)
@@ -141,15 +141,15 @@ private struct PaywallBenefitsView: View {
                 .padding(.horizontal, 4)
             }
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 48)
         .padding(.top, 20)
         .padding(.bottom, 20)
-        .background(Color.primary.opacity(0.03))
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-        )
+        // .background(Color.primary.opacity(0.03))
+        // .cornerRadius(16)
+        // .overlay(
+        //     RoundedRectangle(cornerRadius: 16)
+        //         .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+        // )
         .padding(.horizontal, 20)
     }
 }
@@ -199,25 +199,30 @@ private struct PlanCardSection: View {
     }
 
     var body: some View {
+        let yearlyTrialSubtitle = iap.introductoryOfferDetails(for: .yearly)
+        let weeklyTrialSubtitle = iap.introductoryOfferDetails(for: .weekly)
+
         VStack(spacing: 12) {
             PaywallPlanRow(
                 plan: .yearly,
-                title: "Annual PRO",
-                priceText: "\(iap.priceText(for: .yearly))/year",
-                subtitle: savingsText,
+                title: yearlyTrialSubtitle ?? "Annual PRO",
+                priceText: yearlyTrialSubtitle != nil ? "then \(iap.priceText(for: .yearly))/year" : "\(iap.priceText(for: .yearly))/year",
+                subtitle: yearlyTrialSubtitle != nil ? "Annual PRO" : savingsText,
                 badge: "BEST VALUE",
                 isSelected: vm.selectedPlan == .yearly,
-                onSelect: { vm.selectedPlan = .yearly }
+                onSelect: { vm.selectedPlan = .yearly },
+                isTrialOffer: yearlyTrialSubtitle != nil
             )
             
             PaywallPlanRow(
                 plan: .weekly,
-                title: "Weekly PRO", 
-                priceText: "\(iap.priceText(for: .weekly))/week",
-                subtitle: "Great for homework & exams",
+                title: weeklyTrialSubtitle ?? "Weekly PRO",
+                priceText: weeklyTrialSubtitle != nil ? "then \(iap.priceText(for: .weekly))/week" : "\(iap.priceText(for: .weekly))/week",
+                subtitle: weeklyTrialSubtitle != nil ? "Weekly PRO" : "Great for homework & exams",
                 badge: nil,
                 isSelected: vm.selectedPlan == .weekly,
-                onSelect: { vm.selectedPlan = .weekly }
+                onSelect: { vm.selectedPlan = .weekly },
+                isTrialOffer: weeklyTrialSubtitle != nil
             )
         }
         .padding(.horizontal, 20)
@@ -232,6 +237,7 @@ private struct PaywallPlanRow: View {
     let badge: String?
     let isSelected: Bool
     let onSelect: () -> Void
+    var isTrialOffer: Bool = false
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -245,8 +251,8 @@ private struct PaywallPlanRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(title)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.primary)
+                            .font(.system(size: 18, weight: isTrialOffer ? .bold : .semibold))
+                            .foregroundColor(isTrialOffer ? (colorScheme == .dark ? .accentColor.lighten() : .accentColor) : .primary)
                         
                         Spacer()
                         
@@ -286,8 +292,8 @@ private struct PaywallPlanRow: View {
                     .fill(isSelected ? 
                         LinearGradient(
                             colors: [Color.accentColor.opacity(0.15), Color.accentColor.opacity(0.05)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                          startPoint: .bottomTrailing ,
+                                endPoint: .topLeading
                         ) : 
                         LinearGradient(
                             colors: [
@@ -305,8 +311,8 @@ private struct PaywallPlanRow: View {
                         isSelected ? 
                             LinearGradient(
                                 colors: [Color.accentColor, Color.accentColor.opacity(0.6)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                                startPoint: .bottomTrailing ,
+                                endPoint: .topLeading
                             ) :
                             LinearGradient(
                                 colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.3)],
@@ -328,15 +334,44 @@ private struct PaywallContinueButton: View {
     let isDisabled: Bool
     @EnvironmentObject private var vm: PaywallVM
     @EnvironmentObject private var iap: IAPManager
+
+    private var buttonText: String {
+        // If the yearly plan is selected and the user is eligible for a free trial,
+        // show "Start Free Trial". Otherwise, show "Subscribe Now".
+        if iap.introductoryOfferDetails(for: vm.selectedPlan) != nil {
+            return "Try for Free"
+        }
+        return "Continue"
+    }
     
     var body: some View {
-        Button(action: {
-            Task { await action() }
-        }) {
+
+        VStack {
+            if vm.selectedPlan == .yearly && iap.introductoryOfferDetails(for: .yearly) != nil {
+                HStack {
+                    Image(systemName: "dollarsign.circle")
+                        .foregroundColor(.green)
+                    Text("No payment now")
+                }
+                .font(.body)
+                .foregroundColor(.primary)
+            } else if vm.selectedPlan == .weekly {
+                HStack {
+                    Image(systemName: "checkmark.shield")
+                        .foregroundColor(.blue)
+                    Text("Cancel anytime")
+                }
+                .font(.body)
+                .foregroundColor(.primary)
+            }
+            
+            Button(action: {
+                Task { await action() }
+            }) {
             HStack {
                 Spacer()
                 VStack(spacing: 2) {
-                    Text("Subscribe Now")
+                    Text(buttonText)
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white)
                     
@@ -351,22 +386,31 @@ private struct PaywallContinueButton: View {
                     .foregroundColor(.white)
                 Spacer()
             }
-            .frame(height: 56)
+            .frame(height: 60)
             .background(
                 LinearGradient(
-                    gradient: Gradient(colors: [Color.accentColor, Color.accentColor.opacity(0.8)]),
-                    startPoint: .leading,
-                    endPoint: .trailing
+                    gradient: Gradient(colors: [Color.accentColor, Color.accentColor.opacity(0.7)]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
             )
-            .cornerRadius(12)
-            .shadow(color: .accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+            )
+            .shadow(color: .accentColor.opacity(0.4), radius: 12, x: 0, y: 6)
+            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
         }
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.6 : 1)
         .scaleEffect(isDisabled ? 0.98 : 1.0)
         .animation(.easeInOut(duration: 0.1), value: isDisabled)
         .padding(.horizontal, 20)
+
+       
+
+    }
     }
 }
 
@@ -375,7 +419,7 @@ private struct AuxButtonsBar: View {
     let restoreAction: () -> Void
     var body: some View {
         HStack(spacing: 24) {
-            Button("Restore Purchases", action: restoreAction)
+            Button("Restore", action: restoreAction)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.gray)
                 .disabled(isDisabled)
@@ -398,10 +442,9 @@ private struct LegalTextView: View {
     }
     
     var body: some View {
-        let price = iap.priceText(for: selectedPlan)
         VStack(spacing: 12) {
-            Text("This subscription automatically renews for \(price) \(renewalPeriod). Cancel anytime. Payment will be charged to your Apple ID at confirmation of purchase.")
-                .font(.system(size: 12))
+            Text(legalText)
+                .font(.system(size: 11, weight: .light))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 20)
@@ -417,5 +460,18 @@ private struct LegalTextView: View {
             }
             
         }
+    }
+
+    private var legalText: String {
+        let price = iap.priceText(for: selectedPlan)
+        
+        let trialInfo: String
+        if let trialDetails = iap.introductoryOfferDetails(for: selectedPlan) {
+            trialInfo = " after " + trialDetails.lowercased()
+        } else {
+            trialInfo = ""
+        }
+        
+        return "This subscription automatically renews for \(price) \(renewalPeriod)\(trialInfo). You can cancel anytime."
     }
 } 

@@ -36,7 +36,7 @@ struct videoeditorApp: App {
     @StateObject private var iapManager = IAPManager()
     @StateObject private var creditManager = CreditManager()
     
-    @State private var showPremView: Bool = false
+    @AppStorage("showPremView") private var showPremView: Bool = false
 
     init() {
         // Lock orientation to portrait

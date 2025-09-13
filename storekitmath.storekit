@@ -20,7 +20,7 @@
     "_applicationInternalID" : "6752255824",
     "_developerTeamID" : "CYL68JMKHB",
     "_failTransactionsEnabled" : false,
-    "_lastSynchronizedDate" : 779040867.73241401,
+    "_lastSynchronizedDate" : 779477629.74865496,
     "_locale" : "en_US",
     "_storefront" : "USA",
     "_storeKitErrors" : [
@@ -86,7 +86,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "8.99",
+          "displayPrice" : "7.99",
           "familyShareable" : false,
           "groupNumber" : 2,
           "internalID" : "6752257439",
@@ -114,11 +114,16 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "49.99",
+          "displayPrice" : "39.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "6752257114",
-          "introductoryOffer" : null,
+          "introductoryOffer" : {
+            "internalID" : "FECA076C",
+            "numberOfPeriods" : 1,
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P3D"
+          },
           "localizations" : [
             {
               "description" : "Renewable after 1 year",
