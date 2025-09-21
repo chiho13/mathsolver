@@ -47,7 +47,7 @@ class VisionService: ObservableObject {
         INSTRUCTIONS:
         1. If you find mathematical content, solve it completely.
         2. For simple arithmetic: provide only the final answer.
-        3. For complex problems: show detailed step-by-step solutions.
+        3. For complex problems: ALWAYS show the final answer first, then detailed step-by-step solutions.
         4. Use proper mathematical notation and formatting.
         5. If NO mathematical content is found, respond with exactly: NOMATH.
         
@@ -72,12 +72,15 @@ class VisionService: ObservableObject {
         
         FORMATTING RULES:
         - Use Markdown formatting for text structure
-        - Use ## Step 1, ## Step 2, etc. for step-by-step solutions
-        - Bold final answer introductions: "**Final Answer:**"
+        - Then use ## Step 1, ## Step 2, etc. for step-by-step solutions
+        - Bold answer introductions: "**Answer:**"
         - Do NOT use \\boxed{} command
         - Do NOT use colons to introduce formulas
         
-        EXAMPLE RESPONSE FORMAT:
+        REQUIRED RESPONSE FORMAT (ANSWER FIRST, THEN STEPS):
+        
+        **Answer:** $$\\frac{4}{5} x^{5/2} + x^{1/2} + C$$
+        
         ## Step 1
         
         Rewrite the integral by distributing $x^{-1/2}$ inside:
@@ -90,10 +93,7 @@ class VisionService: ObservableObject {
         
         $$\\int 4x^{3/2} dx = \\frac{8}{5} x^{5/2}$$
         
-        **Final Answer:**
-        The integral equals $$\\frac{4}{5} x^{5/2} + x^{1/2} + C$$
-        
-        Remember: ONLY use $ and $$ for math. Never use \\( or \\[.
+        Remember: ALWAYS show Final Answer section first, then step-by-step explanation. ONLY use $ and $$ for math. Never use \\( or \\[.
         
         Analyze the image now:
         """

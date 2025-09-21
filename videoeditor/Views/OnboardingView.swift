@@ -72,24 +72,33 @@ struct OnboardingView: View {
                                     if index == 0 {
                                         // Main title
                                         VStack(spacing: 24) {
-                                            // Enhanced icon with background
-                                            ZStack {
-                                                Circle()
-                                                    .fill(LinearGradient(
-                                                        gradient: Gradient(colors: [
-                                                            (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.15),
-                                                            (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.05)
-                                                        ]),
-                                                        startPoint: .topLeading,
-                                                        endPoint: .bottomTrailing
-                                                    ))
+                                            // Enhanced icon with corner radius
+                                            if let appIcon = getAppIcon() {
+                                                Image(uiImage: appIcon)
+                                                    .resizable()
+                                                    .scaledToFit()
                                                     .frame(width: 100, height: 100)
-                                                
-                                                Image(systemName: bulletPoint.iconName)
-                                                    .font(.system(size: 44, weight: .medium))
-                                                    .foregroundColor(colorScheme == .dark ? Color.fromHex("#f7cbe3") : .accentColor)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                                                    .shadow(color: (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.2), radius: 20, x: 0, y: 10)
+                                            } else {
+                                                ZStack {
+                                                    Circle()
+                                                        .fill(LinearGradient(
+                                                            gradient: Gradient(colors: [
+                                                                (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.15),
+                                                                (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.05)
+                                                            ]),
+                                                            startPoint: .topLeading,
+                                                            endPoint: .bottomTrailing
+                                                        ))
+                                                        .frame(width: 100, height: 100)
+                                                    
+                                                    Image(systemName: bulletPoint.iconName)
+                                                        .font(.system(size: 44, weight: .medium))
+                                                        .foregroundColor(colorScheme == .dark ? Color.fromHex("#f7cbe3") : .accentColor)
+                                                }
+                                                .shadow(color: (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.2), radius: 20, x: 0, y: 10)
                                             }
-                                            .shadow(color: (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.2), radius: 20, x: 0, y: 10)
                                             
                                             let localizedString = NSLocalizedString(bulletPoint.text, comment: "")
                                             let processedString = localizedString.replacingOccurrences(of: "\\n", with: "\n")
@@ -192,33 +201,33 @@ struct OnboardingView: View {
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             
             // Enhanced page indicator
-            HStack(spacing: 16) {
-                ForEach(0..<pages.count, id: \.self) { index in
-                    ZStack {
-                        // Background circle
-                        Circle()
-                            .fill(Color.gray.opacity(colorScheme == .dark ? 0.2 : 0.25))
-                            .frame(width: 10, height: 10)
+            // HStack(spacing: 16) {
+            //     ForEach(0..<pages.count, id: \.self) { index in
+            //         ZStack {
+            //             // Background circle
+            //             Circle()
+            //                 .fill(Color.gray.opacity(colorScheme == .dark ? 0.2 : 0.25))
+            //                 .frame(width: 10, height: 10)
                         
-                        // Active indicator
-                        if index == currentIndex {
-                            Circle()
-                                .fill(LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor,
-                                        colorScheme == .dark ? Color.fromHex("#f7cbe3").opacity(0.8) : Color.accentColor.opacity(0.8)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ))
-                                .frame(width: 12, height: 12)
-                                .shadow(color: (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.4), radius: 4, x: 0, y: 2)
-                        }
-                    }
-                    .animation(.spring(response: 0.5, dampingFraction: 0.7), value: currentIndex)
-                }
-            }
-            .padding(.vertical, 32)
+            //             // Active indicator
+            //             if index == currentIndex {
+            //                 Circle()
+            //                     .fill(LinearGradient(
+            //                         gradient: Gradient(colors: [
+            //                             colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor,
+            //                             colorScheme == .dark ? Color.fromHex("#f7cbe3").opacity(0.8) : Color.accentColor.opacity(0.8)
+            //                         ]),
+            //                         startPoint: .topLeading,
+            //                         endPoint: .bottomTrailing
+            //                     ))
+            //                     .frame(width: 12, height: 12)
+            //                     .shadow(color: (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.4), radius: 4, x: 0, y: 2)
+            //             }
+            //         }
+            //         .animation(.spring(response: 0.5, dampingFraction: 0.7), value: currentIndex)
+            //     }
+            // }
+            // .padding(.vertical, 32)
             
             // Action buttons
             VStack(spacing: 16) {
@@ -366,10 +375,10 @@ struct OnboardingView: View {
             BulletPoint(iconName: "camera.fill", text: "onboarding-page1-bulletpointone"),
             BulletPoint(iconName: "x.squareroot", text: "onboarding-page1-bulletpointtwo")
         ],
-        [
-            BulletPoint(iconName: "lightbulb.fill", text: "onboarding-page2"),
-            BulletPoint(iconName: "list.number", text: "onboarding-page2-bulletpointtwo"),
-        ]
+        // [
+        //     BulletPoint(iconName: "lightbulb.fill", text: "onboarding-page2"),
+        //     BulletPoint(iconName: "list.number", text: "onboarding-page2-bulletpointtwo"),
+        // ]
     ]
 
     // MARK: - Permission Handling

@@ -279,10 +279,45 @@ struct FormattedText: View {
                     .markdownMargin(bottom: 12)
                     .fixedSize(horizontal: false, vertical: true)
                     .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .listItem { configuration in
                 configuration.label
                     .lineSpacing(8)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+    }
+    
+    // Special theme for Final Answer section to make it more prominent
+    private func markdownThemeForSection(_ section: ContentSection, isFirstSection: Bool = false) -> Theme {
+        let isFinalAnswer = section.title.lowercased().contains("final answer") || isFirstSection
+        
+        return Theme()
+            .text {
+                FontSize(18)
+                ForegroundColor(.primary)
+            }
+            .heading2 { configuration in
+                configuration.label
+                    .markdownTextStyle {
+                        FontWeight(isFinalAnswer ? .bold : .semibold)
+                        FontSize(isFinalAnswer ? 22 : 20)
+                        ForegroundColor(isFinalAnswer ? .green : .primary)
+                    }
+                    .markdownMargin(top: 8, bottom: 4)
+            }
+            .paragraph { configuration in
+                configuration.label
+                    .lineSpacing(5)
+                    .markdownMargin(bottom: 12)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .listItem { configuration in
+                configuration.label
+                    .lineSpacing(8)
+                    .fixedSize(horizontal: false, vertical: true)
             }
     }
 
@@ -296,70 +331,79 @@ struct FormattedText: View {
                 configuration.label
                     .fixedSize(horizontal: false, vertical: true) // Allow Markdown to take its natural height
                     .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .listItem { configuration in
                 configuration.label
                     .fixedSize(horizontal: false, vertical: true)
                     .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
     }
 
     var body: some View {
         ZStack {
             if isRendered && !sections.isEmpty {
-                VStack(alignment: .leading, spacing: 16) {
-                    ForEach(sections, id: \.self) { section in
-                        // Render section title if it exists
-                        if !section.title.isEmpty {
-                            Markdown(section.title)
-                                .markdownTheme(markdownTheme)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .padding(.horizontal, 20) // Apply horizontal padding to align with content blocks
-                        }
+                    VStack(alignment: .leading, spacing: 16) {
+                        ForEach(Array(sections.enumerated()), id: \.element) { index, section in
+                            // Check if this is the first section (Final Answer) or contains "final answer"
+                            let isFirstSection = index == 0
+                            let isFinalAnswer = section.title.lowercased().contains("final answer") || isFirstSection
+                            
+                            // Render section title if it exists
+                            if !section.title.isEmpty {
+                                Markdown(section.title)
+                                    .markdownTheme(markdownThemeForSection(section, isFirstSection: isFirstSection))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.horizontal, 20) // Apply horizontal padding to align with content blocks
+                            }
 
-                        let groupedParts = groupParts(from: section.parts)
+                            let groupedParts = groupParts(from: section.parts)
 
-                        if !groupedParts.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                ForEach(groupedParts, id: \.self) { group in
-                                    if group.isInline {
-                                        FlowLayout(spacing: 4) {
-                                            ForEach(group.parts, id: \.self) { part in
-                                                switch part.type {
-                                                case .markdown:
-                                                    Markdown(part.value)
-                                                        .markdownTheme(inlineMarkdownTheme)
-                                                        .frame(maxWidth: .infinity, alignment: .leading)
+                            if !groupedParts.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    ForEach(groupedParts, id: \.self) { group in
+                                        if group.isInline {
+                                            // For inline content, use a simple VStack instead of FlowLayout to ensure proper wrapping
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                ForEach(group.parts, id: \.self) { part in
+                                                    switch part.type {
+                                                    case .markdown:
+                                                        Markdown(part.value)
+                                                            .markdownTheme(inlineMarkdownTheme)
+                                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                                            .fixedSize(horizontal: false, vertical: true)
 
-                                                case .inlineLatex:
-                                                    MathLabel(latex: part.value, mode: .text)
+                                                    case .inlineLatex:
+                                                        MathLabel(latex: part.value, mode: .text)
+                                                            .frame(maxWidth: .infinity, alignment: .leading)
 
-                                                default:
-                                                    EmptyView()
+                                                    default:
+                                                        EmptyView()
+                                                    }
                                                 }
                                             }
+                                        } else {
+                                            // Block LaTeX is centered
+                                            let part = group.parts.first!
+                                            MathLabel(latex: part.value, mode: .display)
+                                                .fixedSize(horizontal: false, vertical: true)
+                                                .frame(maxWidth: .infinity, alignment: .center)
+                                                .padding(.vertical, 10)
                                         }
-                                    } else {
-                                        // Block LaTeX is centered
-                                        let part = group.parts.first!
-                                        MathLabel(latex: part.value, mode: .display)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                            .frame(maxWidth: .infinity, alignment: .center)
-                                            .padding(.vertical, 10)
                                     }
                                 }
+                                .padding(20)
+                                .background(isFinalAnswer ? Color.green.opacity(0.1) : Color(.systemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(isFinalAnswer ? Color.green.opacity(0.4) : Color.gray.opacity(0.2), lineWidth: isFinalAnswer ? 2 : 1)
+                                )
                             }
-                            .padding(20)
-                            .background(Color(.systemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                            )
                         }
                     }
-                }
             }
 
             if !isRendered {
