@@ -334,6 +334,7 @@ private struct PaywallContinueButton: View {
     let isDisabled: Bool
     @EnvironmentObject private var vm: PaywallVM
     @EnvironmentObject private var iap: IAPManager
+    @State private var isPressed = false
 
     private var buttonText: String {
         // If the yearly plan is selected and the user is eligible for a free trial,
@@ -345,72 +346,105 @@ private struct PaywallContinueButton: View {
     }
     
     var body: some View {
-
-        VStack {
+        VStack(spacing: 16) {
+            // Enhanced benefit indicator
             if vm.selectedPlan == .yearly && iap.introductoryOfferDetails(for: .yearly) != nil {
-                HStack {
-                    Image(systemName: "dollarsign.circle")
+                HStack(spacing: 8) {
+                    Image(systemName: "gift.fill")
                         .foregroundColor(.green)
-                    Text("No payment now")
+                        .font(.system(size: 16, weight: .medium))
+                    Text("No payment now • Cancel anytime")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.primary)
                 }
-                .font(.body)
-                .foregroundColor(.primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.green.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                        )
+                )
             } else if vm.selectedPlan == .weekly {
-                HStack {
-                    Image(systemName: "checkmark.shield")
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.shield.fill")
                         .foregroundColor(.blue)
-                    Text("Cancel anytime")
+                        .font(.system(size: 16, weight: .medium))
+                    Text("Cancel anytime • No commitment")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.primary)
                 }
-                .font(.body)
-                .foregroundColor(.primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color.blue.opacity(0.1))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                        )
+                )
             }
             
+            // Enhanced button with better interaction
             Button(action: {
+                let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                impactFeedback.impactOccurred()
                 Task { await action() }
             }) {
-            HStack {
-                Spacer()
-                VStack(spacing: 2) {
+                HStack(spacing: 12) {
+                    Spacer()
+                    
+                    if vm.selectedPlan == .yearly && iap.introductoryOfferDetails(for: .yearly) != nil {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    
                     Text(buttonText)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 19, weight: .bold))
                         .foregroundColor(.white)
                     
-                    // if vm.selectedPlan == .yearly {
-                    //     Text("Save 70% with Annual Plan")
-                    //         .font(.system(size: 12, weight: .medium))
-                    //         .foregroundColor(.white.opacity(0.8))
-                    // }
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Spacer()
                 }
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                Spacer()
-            }
-            .frame(height: 60)
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [Color.accentColor, Color.accentColor.opacity(0.7)]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
+                .frame(height: 56)
+                .background(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.accentColor,
+                            Color.accentColor.opacity(0.8)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 )
-            )
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-            )
-            .shadow(color: .accentColor.opacity(0.4), radius: 12, x: 0, y: 6)
-            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                .cornerRadius(16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.white.opacity(0.25), lineWidth: 1.5)
+                )
+                .shadow(color: Color.accentColor.opacity(0.5), radius: 16, x: 0, y: 8)
+                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                .scaleEffect(isPressed ? 0.97 : 1.0)
+            }
+            .scaleEffect(isDisabled ? 0.95 : 1.0)
+            .opacity(isDisabled ? 0.6 : 1.0)
+            .disabled(isDisabled)
+            .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
+                withAnimation(.easeInOut(duration: 0.1)) {
+                    isPressed = pressing
+                }
+            }, perform: {})
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
+            .animation(.easeInOut(duration: 0.2), value: isDisabled)
         }
-        .disabled(isDisabled)
-        .opacity(isDisabled ? 0.6 : 1)
-        .scaleEffect(isDisabled ? 0.98 : 1.0)
-        .animation(.easeInOut(duration: 0.1), value: isDisabled)
         .padding(.horizontal, 20)
-
-       
-
-    }
     }
 }
 

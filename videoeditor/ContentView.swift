@@ -178,38 +178,55 @@ struct ContentView: View {
                                             ) {
                                                 ZStack {
                                                     Circle()
-                                                        .stroke(Color.white, lineWidth: 2)
-                                                        .frame(width: 50, height: 50)
+                                                        .fill(Color.white.opacity(0.1))
+                                                        .frame(width: 56, height: 56)
+                                                    
+                                                    Circle()
+                                                        .stroke(Color.white.opacity(0.8), lineWidth: 2)
+                                                        .frame(width: 56, height: 56)
                                                     
                                                     Image(systemName: "photo.on.rectangle")
-                                                        .font(.system(size: 20))
+                                                        .font(.system(size: 22, weight: .medium))
                                                         .foregroundColor(.white)
                                                 }
+                                                .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
                                             }
+                                            .accessibilityLabel("Select photo from library")
+                                            .accessibilityHint("Choose an existing photo of a math problem to solve")
                                             
                                             // Camera capture button in the center
                                             ZStack {
-                                                // Outer ring (stays same size)
+                                                // Enhanced outer ring with glow effect
                                                 Circle()
                                                     .stroke(Color.white, lineWidth: 4)
-                                                    .frame(width: 70, height: 70)
+                                                    .frame(width: 76, height: 76)
+                                                    .shadow(color: .white.opacity(0.3), radius: 8, x: 0, y: 0)
+                                                
                                                 // Inner solid circle (shrinks on press)
                                                 if viewModel.isAnimatingShutter || viewModel.isAnimatingCroppedArea {
                                                     GradientSpinner()
                                                 } else {
                                                     ZStack {
                                                         Circle()
-                                                            .fill(Color.white)
-                                                            .frame(width: 60, height: 60)
+                                                            .fill(LinearGradient(
+                                                                colors: [Color.white, Color.white.opacity(0.9)],
+                                                                startPoint: .top,
+                                                                endPoint: .bottom
+                                                            ))
+                                                            .frame(width: 64, height: 64)
+                                                            .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                                                        
                                                         Image("cameramath")
                                                             .resizable()
                                                             .scaledToFit()
-                                                            .frame(width: 40, height: 40)
+                                                            .frame(width: 42, height: 42)
                                                     }
-                                                    .scaleEffect(isCaptureButtonPressed ? 0.93 : 1.0)
-                                                    .animation(.easeInOut(duration: 0.2), value: isCaptureButtonPressed)
+                                                    .scaleEffect(isCaptureButtonPressed ? 0.92 : 1.0)
+                                                    .animation(.easeInOut(duration: 0.15), value: isCaptureButtonPressed)
                                                 }
                                             }
+                                            .accessibilityLabel("Capture photo")
+                                            .accessibilityHint("Take a photo of a math problem to solve")
                             .onTapGesture {
                                 // Step 1: Check if user is premium first, then credits
                                 if !viewModel.isAnimatingShutter && !viewModel.isAnimatingCroppedArea {
@@ -233,20 +250,33 @@ struct ContentView: View {
                                             
                                             // Torch button on the right
                                             Button(action: {
+                                                // Add haptic feedback for torch toggle
+                                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                                impactFeedback.impactOccurred()
+                                                
                                                 // Toggle torch/flashlight
                                                 toggleTorch()
                                             }) {
                                                 ZStack {
                                                     Circle()
-                                                        .stroke(Color.white, lineWidth: 2)
-                                                        .frame(width: 50, height: 50)
+                                                        .fill(isTorchOn ? Color.yellow.opacity(0.2) : Color.white.opacity(0.1))
+                                                        .frame(width: 56, height: 56)
+                                                    
+                                                    Circle()
+                                                        .stroke(isTorchOn ? Color.yellow.opacity(0.8) : Color.white.opacity(0.8), lineWidth: 2)
+                                                        .frame(width: 56, height: 56)
                                                     
                                                     Image(systemName: isTorchOn ? "bolt.fill" : "bolt")
-                                                        .font(.system(size: 20))
-                                                        .foregroundColor(.white)
+                                                        .font(.system(size: 22, weight: .medium))
+                                                        .foregroundColor(isTorchOn ? Color.yellow : .white)
+                                                        .scaleEffect(isTorchOn ? 1.1 : 1.0)
+                                                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isTorchOn)
                                                 }
+                                                .shadow(color: isTorchOn ? .yellow.opacity(0.4) : .black.opacity(0.2), radius: 8, x: 0, y: 4)
                                             }
                                             .buttonStyle(PlainButtonStyle())
+                                            .accessibilityLabel(isTorchOn ? "Turn off flashlight" : "Turn on flashlight")
+                                            .accessibilityHint("Toggle the camera flashlight for better lighting")
                                         }
                                         .padding(.bottom, 60) // Add bottom padding for safe area
                                         
@@ -278,63 +308,95 @@ struct ContentView: View {
 
                                if selectedPhotoImage != nil && !viewModel.isAnimatingCroppedArea {
                             // Buttons for cropping the selected photo
-                           HStack(spacing: 32) {
+                           HStack(spacing: 24) {
     Button(action: {
+        // Add haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+        impactFeedback.impactOccurred()
+        
         // Reset the photo view and go back to camera
         selectedPhotoImage = nil
         imageOffset = .zero // Reset offset for next use
     }) {
-        Text("Back")
-            .font(.system(size: 18, weight: .semibold))
-            .foregroundColor(.white)
-            .frame(width: 100, height: 50)
-            .background(
-                RoundedRectangle(cornerRadius: 25)
-                    .fill(Color.gray.opacity(0.2))
-                    .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
-            )
+        HStack(spacing: 8) {
+            Image(systemName: "arrow.left")
+                .font(.system(size: 16, weight: .semibold))
+            Text("Back")
+                .font(.system(size: 18, weight: .semibold))
+        }
+        .foregroundColor(.white)
+        .frame(width: 110, height: 52)
+        .background(
+            RoundedRectangle(cornerRadius: 26)
+                .fill(LinearGradient(
+                    colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.2)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                ))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                )
+        )
+        .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
     }
+    .accessibilityLabel("Go back to camera")
+    .accessibilityHint("Return to camera view to take a new photo")
     
-            Button(action: {
-            // Check if user is premium first, then credits before processing
-            if iap.isPremium || creditManager.canUseMathSolver() {
-                // Deduct credit here since user is initiating the solve action
-                if !iap.isPremium {
-                    let _ = creditManager.useCredit()
-                }
-                
-                // Crop the image and process it
-                if let image = selectedPhotoImage {
-                    let _croppedImage = cropImage(image: image, rect: captureRect, offset: imageOffset)
-                    if let croppedImage = _croppedImage {
-                        viewModel.selectedImage = croppedImage
-                        viewModel.isAnimatingCroppedArea = true // Trigger dot animation
-
-                        
-                        Task {
-                            await viewModel.solveMathProblem(deductCredit: false) // Send to backend
-                        }
+    Button(action: {
+        // Add haptic feedback
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+        
+        // Check if user is premium first, then credits before processing
+        if iap.isPremium || creditManager.canUseMathSolver() {
+            // Deduct credit here since user is initiating the solve action
+            if !iap.isPremium {
+                let _ = creditManager.useCredit()
+            }
+            
+            // Crop the image and process it
+            if let image = selectedPhotoImage {
+                let _croppedImage = cropImage(image: image, rect: captureRect, offset: imageOffset)
+                if let croppedImage = _croppedImage {
+                    viewModel.selectedImage = croppedImage
+                    viewModel.isAnimatingCroppedArea = true // Trigger dot animation
+                    
+                    Task {
+                        await viewModel.solveMathProblem(deductCredit: false) // Send to backend
                     }
                 }
-            } else {
-                // No credits left and not premium, show premium view
-                showPremiumView = true
             }
-            // Reset photo and go back to camera
-    //         withAnimation(.easeInOut(duration: 0.3)) {
-    //     imageOffset = .zero
-    // }
-        }) {
+        } else {
+            // No credits left and not premium, show premium view
+            showPremiumView = true
+        }
+    }) {
+        HStack(spacing: 8) {
             Text("Solve")
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(width: 100, height: 50)
-                .background(
-                    RoundedRectangle(cornerRadius: 25)
-                        .fill(Color.green.opacity(0.9))
-                        .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 3)
-                )
+            Image(systemName: "sparkles")
+                .font(.system(size: 16, weight: .semibold))
         }
+        .foregroundColor(.white)
+        .frame(width: 110, height: 52)
+        .background(
+            RoundedRectangle(cornerRadius: 26)
+                .fill(LinearGradient(
+                    colors: [Color.green, Color.green.opacity(0.8)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                ))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26)
+                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                )
+        )
+        .shadow(color: .green.opacity(0.4), radius: 12, x: 0, y: 6)
+        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+    }
+    .accessibilityLabel("Solve math problem")
+    .accessibilityHint("Process the selected area and get the solution")
 }
 .padding(.bottom, 32)
 .padding(.horizontal, 16)

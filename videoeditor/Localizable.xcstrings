@@ -88,7 +88,13 @@
         }
       }
     },
-    "Cancel anytime" : {
+    "Cancel anytime • No commitment" : {
+
+    },
+    "Capture photo" : {
+
+    },
+    "Choose an existing photo of a math problem to solve" : {
 
     },
     "Choose language pairs" : {
@@ -134,6 +140,15 @@
           }
         }
       }
+    },
+    "Copied!" : {
+
+    },
+    "Copy" : {
+
+    },
+    "Copy solution to clipboard" : {
+
     },
     "Delete" : {
       "extractionState" : "manual",
@@ -183,7 +198,7 @@
         }
       }
     },
-    "Getting your solution..." : {
+    "Go back to camera" : {
 
     },
     "Good lighting helps with text recognition" : {
@@ -207,6 +222,9 @@
       }
     },
     "Make sure the image contains clear mathematical equations, formulas, or word problems" : {
+
+    },
+    "Math Solution" : {
 
     },
     "Math Solver" : {
@@ -234,7 +252,7 @@
         }
       }
     },
-    "No payment now" : {
+    "No payment now • Cancel anytime" : {
 
     },
     "OK" : {
@@ -403,6 +421,9 @@
     "PRO" : {
 
     },
+    "Process the selected area and get the solution" : {
+
+    },
     "Processing your purchase" : {
 
     },
@@ -427,6 +448,9 @@
           }
         }
       }
+    },
+    "Return to camera view to take a new photo" : {
+
     },
     "Search for places, news, or tips..." : {
       "extractionState" : "manual",
@@ -489,13 +513,31 @@
     "Select Photo" : {
 
     },
+    "Select photo from library" : {
+
+    },
+    "Share" : {
+
+    },
+    "Share solution" : {
+
+    },
     "Solution" : {
+
+    },
+    "Solution copied to clipboard" : {
 
     },
     "Solve" : {
 
     },
+    "Solve math problem" : {
+
+    },
     "Solving..." : {
+
+    },
+    "Something went wrong" : {
 
     },
     "Start for Free" : {
@@ -519,6 +561,9 @@
           }
         }
       }
+    },
+    "Take a photo of a math problem to solve" : {
+
     },
     "Take photo of a math question" : {
 
@@ -597,6 +642,15 @@
           }
         }
       }
+    },
+    "Toggle the camera flashlight for better lighting" : {
+
+    },
+    "Turn off flashlight" : {
+
+    },
+    "Turn on flashlight" : {
+
     },
     "Unlimited" : {
 

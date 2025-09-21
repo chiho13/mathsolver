@@ -189,12 +189,12 @@ struct SidebarView: View {
                 .transition(.move(edge: .leading))
             }
         }
-        .sheet(isPresented: $showingLanguageSheet) {
-            LanguageSelectionSheet(
-                selectedLanguage: $languageSettings.sourceLanguage,
-                languages: languageSettings.availableLanguages.map { Language(id: $0.key, displayName: $0.value) },
-                placeholder: "Search"
-            )
-        }
+//        .sheet(isPresented: $showingLanguageSheet) {
+//            LanguageSelectionSheet(
+//                selectedLanguage: $languageSettings.sourceLanguage,
+//                languages: languageSettings.availableLanguages.map { Language(id: $0.key, displayName: $0.value) },
+//                placeholder: "Search"
+//            )
+//        }
     }
 }

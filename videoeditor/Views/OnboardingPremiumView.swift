@@ -1082,19 +1082,19 @@ struct ThickStrikethroughText: View {
     }
 }
 
-struct PressableButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: configuration.isPressed ? [Color.fromHex("#1643d4"), Color.fromHex("#2a7ae3")] : [.teal, Color.fromHex("#1643d4")]),
-                    startPoint: .trailing,
-                    endPoint: .leading
-                )
-            )
-            .cornerRadius(10)
-            .opacity(configuration.isPressed ? 0.9 : 1.0)
-            .scaleEffect(configuration.isPressed ? 0.99 : 1.0)
-            .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
-    }
-}
+//struct PressableButtonStyle: ButtonStyle {
+//    func makeBody(configuration: Configuration) -> some View {
+//        configuration.label
+//            .background(
+//                LinearGradient(
+//                    gradient: Gradient(colors: configuration.isPressed ? [Color.fromHex("#1643d4"), Color.fromHex("#2a7ae3")] : [.teal, Color.fromHex("#1643d4")]),
+//                    startPoint: .trailing,
+//                    endPoint: .leading
+//                )
+//            )
+//            .cornerRadius(10)
+//            .opacity(configuration.isPressed ? 0.9 : 1.0)
+//            .scaleEffect(configuration.isPressed ? 0.99 : 1.0)
+//            .animation(.easeInOut(duration: 0.2), value: configuration.isPressed)
+//    }
+//}
