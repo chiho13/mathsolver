@@ -37,21 +37,21 @@ struct SolutionSheetView: View {
                                 
                                 Spacer()
                             }
-                            .padding(.horizontal, 24)
+                            .padding(.horizontal, 16)
                             .padding(.top, 8)
                             
                             // Solution content with better styling
                             FormattedText(text: visionResponse)
-                                .padding(.horizontal, 24)
+                                .padding(.horizontal, 16)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                        }
+                        }.padding(.horizontal, 16)
                     }
                     .scrollIndicators(.visible)
                     
                     // Action buttons
                     VStack(spacing: 12) {
                         Divider()
-                            .padding(.horizontal, 24)
+                            .padding(.horizontal, 16)
                         
                         HStack(spacing: 16) {
                             // Copy button
@@ -103,7 +103,7 @@ struct SolutionSheetView: View {
                             }
                             .accessibilityLabel("Share solution")
                         }
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, 16)
                         .padding(.bottom, 16)
                     }
                     

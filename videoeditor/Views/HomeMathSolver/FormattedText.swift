@@ -15,7 +15,7 @@ struct MathLabel: UIViewRepresentable {
         label.textAlignment = .left
         label.labelMode = mode
         label.latex = latex
-        label.contentInsets = UIEdgeInsets(top: 5, left: 0, bottom: 5, right: 0) // Add padding to prevent clipping
+        label.contentInsets = UIEdgeInsets(top: mode == .display ? 5 : 0, left: 0, bottom: mode == .display ? 5 : 0, right: 0) // Adjusted padding
 
         // For dynamic height in SwiftUI
         label.setContentHuggingPriority(.required, for: .vertical)
@@ -278,8 +278,6 @@ struct FormattedText: View {
                     .lineSpacing(5)
                     .markdownMargin(bottom: 12)
                     .fixedSize(horizontal: false, vertical: true)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .listItem { configuration in
                 configuration.label
@@ -311,8 +309,6 @@ struct FormattedText: View {
                     .lineSpacing(5)
                     .markdownMargin(bottom: 12)
                     .fixedSize(horizontal: false, vertical: true)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .listItem { configuration in
                 configuration.label
@@ -330,8 +326,6 @@ struct FormattedText: View {
             .paragraph { configuration in
                 configuration.label
                     .fixedSize(horizontal: false, vertical: true) // Allow Markdown to take its natural height
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .listItem { configuration in
                 configuration.label
@@ -356,7 +350,7 @@ struct FormattedText: View {
                                     .markdownTheme(markdownThemeForSection(section, isFirstSection: isFirstSection))
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .fixedSize(horizontal: false, vertical: true)
-                                    .padding(.horizontal, 20) // Apply horizontal padding to align with content blocks
+                                    .padding(.horizontal, 12) // Apply horizontal padding to align with content blocks
                             }
 
                             let groupedParts = groupParts(from: section.parts)
@@ -365,20 +359,19 @@ struct FormattedText: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     ForEach(groupedParts, id: \.self) { group in
                                         if group.isInline {
-                                            // For inline content, use a simple VStack instead of FlowLayout to ensure proper wrapping
-                                            VStack(alignment: .leading, spacing: 4) {
+                                            // For inline content, use FlowLayout
+                                            FlowLayout(spacing: 4) {
                                                 ForEach(group.parts, id: \.self) { part in
                                                     switch part.type {
                                                     case .markdown:
                                                         Markdown(part.value)
                                                             .markdownTheme(inlineMarkdownTheme)
-                                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                                            .fixedSize(horizontal: false, vertical: true)
-
+                                                            .fixedSize() // Important for FlowLayout to know the size
+                                                            
                                                     case .inlineLatex:
                                                         MathLabel(latex: part.value, mode: .text)
-                                                            .frame(maxWidth: .infinity, alignment: .leading)
-
+                                                            .fixedSize() // Important for FlowLayout
+                                                        
                                                     default:
                                                         EmptyView()
                                                     }
@@ -394,7 +387,7 @@ struct FormattedText: View {
                                         }
                                     }
                                 }
-                                .padding(20)
+                                .padding(12)
                                 .background(isFinalAnswer ? Color.green.opacity(0.1) : Color(.systemBackground))
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .overlay(
