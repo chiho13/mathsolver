@@ -48,15 +48,15 @@ struct PaywallView: View {
                 .edgesIgnoringSafeArea(.top)
 
             // Close button
-            // Button(action: onClose) {
-            //     Image(systemName: "xmark")
-            //         .font(.system(size: 20, weight: .semibold))
-            //         .foregroundColor(.primary.opacity(0.6))
-            //         .padding(12)
-            //         .background(.thinMaterial, in: Circle())
-            // }
-            // .padding(.trailing, 16)
-            // .padding(.top, 8)
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.primary.opacity(0.6))
+                    .padding(12)
+                    .background(.thinMaterial, in: Circle())
+            }
+            .padding(.trailing, 16)
+            .padding(.top, 8)
            
         }
         .alert(item: $vm.activeAlert) { alert in
@@ -198,32 +198,59 @@ private struct PlanCardSection: View {
         return "Best value - save \(Int(percentage.rounded()))%"
     }
 
+    private var yearlyEquivalentMonthlyText: String {
+        guard let yearlyPrice = iap.getPrice(for: .yearly) else { return "" }
+        let monthly = NSDecimalNumber(decimal: yearlyPrice).doubleValue / 12.0
+
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale.current
+
+        guard let formatted = formatter.string(from: NSNumber(value: monthly)) else {
+            return ""
+        }
+        return "\(formatted)/month equivalent"
+    }
+
     var body: some View {
         let yearlyTrialSubtitle = iap.introductoryOfferDetails(for: .yearly)
         let weeklyTrialSubtitle = iap.introductoryOfferDetails(for: .weekly)
 
         VStack(spacing: 12) {
+            Text("Choose your plan")
+                .font(.system(size: 18, weight: .bold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+
             PaywallPlanRow(
                 plan: .yearly,
                 title: yearlyTrialSubtitle ?? "Annual PRO",
                 priceText: yearlyTrialSubtitle != nil ? "then \(iap.priceText(for: .yearly))/year" : "\(iap.priceText(for: .yearly))/year",
-                subtitle: yearlyTrialSubtitle != nil ? "Annual PRO" : savingsText,
-                badge: "BEST VALUE",
+                subtitle: yearlyTrialSubtitle != nil ? "Annual PRO" : (yearlyEquivalentMonthlyText.isEmpty ? savingsText : "\(savingsText) • \(yearlyEquivalentMonthlyText)"),
+                badge: "MOST POPULAR",
                 isSelected: vm.selectedPlan == .yearly,
                 onSelect: { vm.selectedPlan = .yearly },
-                isTrialOffer: yearlyTrialSubtitle != nil
+                isTrialOffer: yearlyTrialSubtitle != nil,
+                isPrimary: true
             )
             
             PaywallPlanRow(
                 plan: .weekly,
                 title: weeklyTrialSubtitle ?? "Weekly PRO",
                 priceText: weeklyTrialSubtitle != nil ? "then \(iap.priceText(for: .weekly))/week" : "\(iap.priceText(for: .weekly))/week",
-                subtitle: weeklyTrialSubtitle != nil ? "Weekly PRO" : "Great for homework & exams",
+                subtitle: weeklyTrialSubtitle != nil ? "Weekly PRO" : "Flexible short-term access",
                 badge: nil,
                 isSelected: vm.selectedPlan == .weekly,
                 onSelect: { vm.selectedPlan = .weekly },
-                isTrialOffer: weeklyTrialSubtitle != nil
+                isTrialOffer: weeklyTrialSubtitle != nil,
+                isPrimary: false
             )
+
+            if vm.selectedPlan == .yearly {
+                Text("Most users choose Annual to save more")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(.horizontal, 20)
     }
@@ -238,6 +265,7 @@ private struct PaywallPlanRow: View {
     let isSelected: Bool
     let onSelect: () -> Void
     var isTrialOffer: Bool = false
+    var isPrimary: Bool = false
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -251,7 +279,7 @@ private struct PaywallPlanRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(title)
-                            .font(.system(size: 18, weight: isTrialOffer ? .bold : .semibold))
+                            .font(.system(size: isPrimary ? 19 : 17, weight: isTrialOffer ? .bold : .semibold))
                             .foregroundColor(isTrialOffer ? (colorScheme == .dark ? .accentColor.lighten() : .accentColor) : .primary)
                         
                         Spacer()
@@ -274,18 +302,18 @@ private struct PaywallPlanRow: View {
                     }
                     
                     Text(subtitle)
-                        .font(.system(size: 14))
+                        .font(.system(size: isPrimary ? 14 : 13))
                         .foregroundColor(.secondary)
                     
                     Text(priceText)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: isPrimary ? 17 : 15, weight: .medium))
                         .foregroundColor(.accentColor)
                 }
                 
                 Spacer()
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.vertical, isPrimary ? 18 : 14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16)
@@ -322,7 +350,7 @@ private struct PaywallPlanRow: View {
                         lineWidth: isSelected ? 2 : 1
                     )
             )
-            .shadow(color: isSelected ? Color.accentColor.opacity(0.2) : Color.clear, radius: 8, x: 0, y: 4)
+            .shadow(color: isSelected ? Color.accentColor.opacity(isPrimary ? 0.24 : 0.18) : Color.clear, radius: isPrimary ? 10 : 6, x: 0, y: 4)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

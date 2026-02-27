@@ -108,6 +108,9 @@
         }
       }
     },
+    "Choose your plan" : {
+
+    },
     "Clear All" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -240,6 +243,9 @@
           }
         }
       }
+    },
+    "Most users choose Annual to save more" : {
+
     },
     "next" : {
       "extractionState" : "manual",
