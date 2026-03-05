@@ -81,6 +81,10 @@ class VisionViewModel: ObservableObject {
     /// Performs math problem solving with automatic detection
     @MainActor
     func solveMathProblem(deductCredit: Bool = true) async {
+        guard !isLoading else {
+            return
+        }
+        
         guard let image = selectedImage else {
             errorMessage = "Please select an image first."
             return

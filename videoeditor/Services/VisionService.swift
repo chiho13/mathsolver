@@ -20,18 +20,51 @@ enum VisionError: Error {
     case imageContentNotSuitable
 }
 
-struct GroqVisionRequest: Codable {
-    let prompt: String
-    let imageBase64: String
-    let mimeType: String
-}
-
 struct GroqVisionResponse: Codable {
     let responseText: String
 }
 
 struct GroqVisionErrorResponse: Codable {
     let error: String
+}
+
+struct MathpixOCRRequest: Codable {
+    let imageBase64: String
+    let mimeType: String
+    let formats: [String]
+    let mathInlineDelimiters: [String]
+    let rmSpaces: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case imageBase64
+        case mimeType
+        case formats
+        case mathInlineDelimiters = "math_inline_delimiters"
+        case rmSpaces = "rm_spaces"
+    }
+}
+
+struct MathpixErrorInfo: Codable {
+    let id: String?
+    let message: String?
+}
+
+struct MathpixOCRResponse: Codable {
+    let text: String?
+    let latexStyled: String?
+    let error: String?
+    let errorInfo: MathpixErrorInfo?
+
+    enum CodingKeys: String, CodingKey {
+        case text
+        case latexStyled = "latex_styled"
+        case error
+        case errorInfo = "error_info"
+    }
+}
+
+struct OpenAITextRequest: Codable {
+    let prompt: String
 }
 
 class VisionService: ObservableObject {
@@ -47,9 +80,12 @@ class VisionService: ObservableObject {
         INSTRUCTIONS:
         1. If you find mathematical content, solve it completely.
         2. For simple arithmetic: provide only the final answer.
-        3. For complex problems: ALWAYS show the final answer first, then detailed step-by-step solutions.
+        3. For complex problems: compute and verify first, then show the final answer first, then detailed step-by-step solutions.
         4. Use proper mathematical notation and formatting.
         5. If NO mathematical content is found, respond with exactly: NOMATH.
+        6. If the input is an integral, derivative, equation, or algebraic expression, verify your final result before responding.
+        7. Never provide two different final answers. Return exactly one final answer.
+        8. Do not reveal corrections, retries, or internal checking. Output only the final polished solution.
         
         CRITICAL LATEX FORMATTING REQUIREMENTS - READ THIS CAREFULLY:
         
@@ -76,9 +112,20 @@ class VisionService: ObservableObject {
         - Bold answer introductions: "**Answer:**"
         - Do NOT use \\boxed{} command
         - Do NOT use colons to introduce formulas
-        
+        - Do NOT include an "Alternative answer" section
+        - Do NOT include a second "Final Answer"
+
+        ACCURACY CHECK (MANDATORY BEFORE FINAL OUTPUT):
+        - Compute the result
+        - Verify it:
+          - For integrals: differentiate your antiderivative and confirm it matches the original integrand exactly
+          - For derivatives: optionally integrate/check algebraic consistency
+          - For equations: substitute back into the original equation
+        - If verification fails, correct the solution before producing the final answer
+        - Perform all checks silently before writing the first line of your response
+
         REQUIRED RESPONSE FORMAT (ANSWER FIRST, THEN STEPS):
-        
+
         **Answer:** $$\\frac{4}{5} x^{5/2} + x^{1/2} + C$$
         
         ## Step 1
@@ -93,7 +140,7 @@ class VisionService: ObservableObject {
         
         $$\\int 4x^{3/2} dx = \\frac{8}{5} x^{5/2}$$
         
-        Remember: ALWAYS show Final Answer section first, then step-by-step explanation. ONLY use $ and $$ for math. Never use \\( or \\[.
+        Remember: ALWAYS show one verified Final Answer section first, then step-by-step explanation. NEVER show contradictory answers. ONLY use $ and $$ for math. Never use \\( or \\[.
         
         Analyze the image now:
         """
@@ -147,10 +194,6 @@ class VisionService: ObservableObject {
             throw VisionError.promptTooLong
         }
 
-        guard let url = URL(string: baseURL + "/gpt-vision") else {
-            throw VisionError.invalidURL
-        }
-
         // Convert UIImage to base64 string and determine MIME type.
         // Using JPEG with optimized compression for math problems
         guard let imageData = optimizeImageForOCR(image) else {
@@ -159,21 +202,52 @@ class VisionService: ObservableObject {
         
         let imageBase64 = imageData.base64EncodedString()
         
-        let maxImageSize = 10 * 1024 * 1024 // 10MB
+        // Mathpix JSON requests support up to 2MB base64 payloads for image data.
+        let maxImageSize = 2 * 1024 * 1024
         if imageBase64.count > maxImageSize {
             throw VisionError.imageTooLarge
         }
-        
-        let mimeType = "image/jpeg"
 
-        let requestBody = GroqVisionRequest(prompt: prompt, imageBase64: imageBase64, mimeType: mimeType)
-        
+        do {
+            let mimeType = "image/jpeg"
+            let ocrStart = Date()
+            let extractedText = try await extractMathTextWithMathpix(imageBase64: imageBase64, mimeType: mimeType)
+#if DEBUG
+            print(String(format: "[Timing] Image->LaTeX: %.2fs", Date().timeIntervalSince(ocrStart)))
+#endif
+            guard !extractedText.isEmpty else {
+                throw VisionError.noMathFound
+            }
+            let solveStart = Date()
+            let solved = try await solveWithOpenAI(prompt: prompt, extractedText: extractedText)
+#if DEBUG
+            print(String(format: "[Timing] Solve from LaTeX: %.2fs", Date().timeIntervalSince(solveStart)))
+#endif
+            return solved
+        } catch let error as VisionError {
+            throw error // Re-throw our custom errors
+        } catch {
+            throw VisionError.networkError(error)
+        }
+    }
+
+    private func extractMathTextWithMathpix(imageBase64: String, mimeType: String) async throws -> String {
+        guard let url = URL(string: baseURL + "/mathpix-ocr") else {
+            throw VisionError.invalidURL
+        }
+
+        let requestBody = MathpixOCRRequest(
+            imageBase64: imageBase64,
+            mimeType: mimeType,
+            formats: ["text", "latex_styled"],
+            mathInlineDelimiters: ["$", "$"],
+            rmSpaces: true
+        )
         let jsonData: Data
         do {
             jsonData = try JSONEncoder().encode(requestBody)
         } catch {
             throw VisionError.jsonEncodingError(error)
-            
         }
 
         var request = URLRequest(url: url)
@@ -182,44 +256,113 @@ class VisionService: ObservableObject {
         request.httpBody = jsonData
         request.timeoutInterval = requestTimeout
 
-        do {
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw VisionError.invalidResponse
-            }
-
-            if !(200...299).contains(httpResponse.statusCode) {
-                if let errorResponse = try? JSONDecoder().decode(GroqVisionErrorResponse.self, from: data) {
-                    throw VisionError.serverError(errorResponse.error)
-                }
-                let errorText = String(data: data, encoding: .utf8) ?? "Unknown server error"
-                throw VisionError.serverError("Server returned status code \(httpResponse.statusCode). \(errorText)")
-            }
-            
-            do {
-                let result = try JSONDecoder().decode(GroqVisionResponse.self, from: data)
-                let responseText = result.responseText.trimmingCharacters(in: .whitespacesAndNewlines)
-                
-                // Validate response is not empty
-                guard !responseText.isEmpty else {
-                    throw VisionError.invalidResponse
-                }
-                
-                return responseText
-            } catch let decodingError {
-                // Log the raw response for debugging
-                let rawResponse = String(data: data, encoding: .utf8) ?? "Unable to decode response as UTF-8"
-                print("Failed to decode response. Raw response: \(rawResponse)")
-                print("Decoding error: \(decodingError)")
-                throw VisionError.invalidResponse
-            }
-
-        } catch let error as VisionError {
-            throw error // Re-throw our custom errors
-        } catch {
-            throw VisionError.networkError(error)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw VisionError.invalidResponse
         }
+        logJSONResponse(data, label: "Mathpix OCR", statusCode: httpResponse.statusCode)
+
+        if !(200...299).contains(httpResponse.statusCode) {
+            if let errorResponse = try? JSONDecoder().decode(GroqVisionErrorResponse.self, from: data) {
+                throw VisionError.serverError(errorResponse.error)
+            }
+            if let ocrErrorResponse = try? JSONDecoder().decode(MathpixOCRResponse.self, from: data),
+               let error = ocrErrorResponse.error {
+                throw VisionError.serverError(error)
+            }
+            let errorText = String(data: data, encoding: .utf8) ?? "Unknown server error"
+            throw VisionError.serverError("Server returned status code \(httpResponse.statusCode). \(errorText)")
+        }
+
+        do {
+            let result = try JSONDecoder().decode(MathpixOCRResponse.self, from: data)
+            if let error = result.error, !error.isEmpty {
+                let errorId = result.errorInfo?.id ?? "unknown"
+                throw VisionError.serverError("Mathpix API error (\(errorId)): \(error)")
+            }
+
+            let latex = (result.latexStyled ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !latex.isEmpty {
+                return latex
+            }
+
+            return (result.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch let decodingError {
+            let rawResponse = String(data: data, encoding: .utf8) ?? "Unable to decode response as UTF-8"
+            print("Failed to decode Mathpix OCR response. Raw response: \(rawResponse)")
+            print("Decoding error: \(decodingError)")
+            throw VisionError.invalidResponse
+        }
+    }
+
+    private func solveWithOpenAI(prompt: String, extractedText: String) async throws -> String {
+        guard let url = URL(string: baseURL + "/prompt-groq") else {
+            throw VisionError.invalidURL
+        }
+
+        let combinedPrompt = "\(prompt)\n\nLaTeX from OCR:\n\(extractedText)"
+        let requestBody = OpenAITextRequest(prompt: combinedPrompt)
+        let jsonData: Data
+        do {
+            jsonData = try JSONEncoder().encode(requestBody)
+        } catch {
+            throw VisionError.jsonEncodingError(error)
+        }
+
+#if DEBUG
+        let preview = extractedText.prefix(200)
+        print("[Prompt Solve] request: prompt_len=\(combinedPrompt.count), text_len=\(extractedText.count), text_preview=\(preview)")
+#endif
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = jsonData
+        request.timeoutInterval = requestTimeout
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw VisionError.invalidResponse
+        }
+        logJSONResponse(data, label: "Prompt Solve", statusCode: httpResponse.statusCode)
+
+        if !(200...299).contains(httpResponse.statusCode) {
+            if let errorResponse = try? JSONDecoder().decode(GroqVisionErrorResponse.self, from: data) {
+                throw VisionError.serverError(errorResponse.error)
+            }
+            let errorText = String(data: data, encoding: .utf8) ?? "Unknown server error"
+            throw VisionError.serverError("Server returned status code \(httpResponse.statusCode). \(errorText)")
+        }
+
+        if let decoded = try? JSONDecoder().decode(GroqVisionResponse.self, from: data) {
+            let responseText = decoded.responseText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !responseText.isEmpty else {
+                throw VisionError.invalidResponse
+            }
+            return responseText
+        }
+
+        // Fallback for alternative response keys from /prompt
+        if
+            let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let text = (jsonObject["response"] as? String) ??
+                (jsonObject["answer"] as? String) ??
+                (jsonObject["text"] as? String) ??
+                (jsonObject["responseText"] as? String) ??
+                (jsonObject["result"] as? String) ??
+                ((jsonObject["data"] as? [String: Any])?["response"] as? String) ??
+                ((jsonObject["data"] as? [String: Any])?["text"] as? String)
+        {
+            let responseText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !responseText.isEmpty else {
+                throw VisionError.invalidResponse
+            }
+            return responseText
+        }
+
+        let rawResponse = String(data: data, encoding: .utf8) ?? "Unable to decode response as UTF-8"
+        print("Failed to decode OpenAI response. Raw response: \(rawResponse)")
+        throw VisionError.invalidResponse
     }
     
     /// Optimizes image for better OCR performance
@@ -233,8 +376,8 @@ class VisionService: ObservableObject {
             imageData = image.jpegData(compressionQuality: compressionQuality)
             
             if let data = imageData {
-                // If image is under 5MB, use it
-                if data.count < 5 * 1024 * 1024 {
+                // Keep JPEG comfortably below the Mathpix 2MB base64 JSON limit.
+                if data.count < 1_400_000 {
                     break
                 }
             }
@@ -244,5 +387,20 @@ class VisionService: ObservableObject {
         
         return imageData
     }
-}
 
+    private func logJSONResponse(_ data: Data, label: String, statusCode: Int) {
+
+        if
+            let object = try? JSONSerialization.jsonObject(with: data),
+            let prettyData = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted]),
+            let prettyString = String(data: prettyData, encoding: .utf8)
+        {
+            print("[\(label)] status=\(statusCode)\n\(prettyString)")
+            return
+        }
+
+        let raw = String(data: data, encoding: .utf8) ?? "<non-utf8 body>"
+        print("[\(label)] status=\(statusCode)\n\(raw)")
+
+    }
+}

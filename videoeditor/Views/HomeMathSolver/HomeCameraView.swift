@@ -19,6 +19,26 @@ struct CameraView: UIViewControllerRepresentable {
     @ObservedObject var viewModel: VisionViewModel
     @Binding var triggerCapture: Bool
     @Binding var freezeImage: UIImage?
+
+    private func preferredBackCameraDevice() -> AVCaptureDevice? {
+        // Prefer virtual multi-camera systems first so iOS can use the best lens path.
+        let virtualDiscovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInTripleCamera, .builtInDualWideCamera, .builtInDualCamera],
+            mediaType: .video,
+            position: .back
+        )
+        if let device = virtualDiscovery.devices.first {
+            return device
+        }
+
+        // Fallback: prefer ultra-wide (macro-capable on supported devices), then wide angle.
+        let physicalDiscovery = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInUltraWideCamera, .builtInWideAngleCamera],
+            mediaType: .video,
+            position: .back
+        )
+        return physicalDiscovery.devices.first
+    }
     
     class Coordinator: NSObject {
         var parent: CameraView
@@ -30,6 +50,7 @@ struct CameraView: UIViewControllerRepresentable {
         var currentZoomFactor: CGFloat = 1.0
         var snapshotView: UIImageView?
         var viewControllerView: UIView?
+        var isCaptureInProgress: Bool = false
         
         init(parent: CameraView) {
             self.parent = parent
@@ -64,12 +85,25 @@ struct CameraView: UIViewControllerRepresentable {
     let session = AVCaptureSession()
     session.sessionPreset = .photo
     
-    guard let device = AVCaptureDevice.default(for: .video),
+    guard let device = preferredBackCameraDevice(),
           let input = try? AVCaptureDeviceInput(device: device) else {
         DispatchQueue.main.async {
             self.viewModel.errorMessage = "Failed to access camera. Please check your device settings."
         }
         return viewController
+    }
+
+    do {
+        try device.lockForConfiguration()
+        if device.isFocusModeSupported(.continuousAutoFocus) {
+            device.focusMode = .continuousAutoFocus
+        }
+        if device.isAutoFocusRangeRestrictionSupported {
+            device.autoFocusRangeRestriction = .near
+        }
+        device.unlockForConfiguration()
+    } catch {
+        print("Could not configure macro/near focus mode: \(error)")
     }
     
     // Store the session and device in the coordinator
@@ -141,10 +175,9 @@ struct CameraView: UIViewControllerRepresentable {
     
     func updateUIViewController(_ uiViewController: UIViewController, context: UIViewControllerRepresentableContext<CameraView>) {
         if triggerCapture {
+            // Reset immediately to avoid duplicate capture calls during repeated view updates.
+            self.triggerCapture = false
             context.coordinator.capturePhoto()
-            DispatchQueue.main.async {
-                self.triggerCapture = false
-            }
         }
         
         // Update the capture rect overlay
@@ -184,6 +217,7 @@ struct CameraView: UIViewControllerRepresentable {
 // MARK: - AVCapturePhotoCaptureDelegate
 extension CameraView.Coordinator: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+    defer { isCaptureInProgress = false }
     guard let imageData = photo.fileDataRepresentation(),
           let image = UIImage(data: imageData) else {
         DispatchQueue.main.async {
@@ -320,6 +354,8 @@ extension CameraView.Coordinator {
     }
     
     @objc func capturePhoto() {
+        guard !isCaptureInProgress else { return }
+        isCaptureInProgress = true
         let settings = AVCapturePhotoSettings()
         photoOutput?.capturePhoto(with: settings, delegate: self)
     }
