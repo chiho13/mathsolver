@@ -517,45 +517,54 @@ struct ContentView: View {
                     }
                 }
             }
-            .toolbar {
-                if iap.didCheckPremium && !iap.isPremium {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        HStack(spacing: 8) {
-                            // Credit counter next to upgrade button
-                            Text(creditManager.creditDisplayText())
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 14)
-                                        .fill(creditManager.hasCredits ? 
-                                              LinearGradient(colors: [Color.green.opacity(0.9), Color.green.opacity(0.7)], startPoint: .top, endPoint: .bottom) : 
-                                              LinearGradient(colors: [Color.red.opacity(0.9), Color.red.opacity(0.7)], startPoint: .top, endPoint: .bottom))
-                                        .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
-                                )
-                            
-                            // Upgrade button
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.1)) {
-                                    showPremiumView = true
-                                }
-                            }) {
-                                Text("Upgrade")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.white)
-                                    .padding(8)
-                                    .background(
-                                        LinearGradient(gradient: Gradient(colors: [.blue, .purple]), startPoint: .leading, endPoint: .trailing)
-                                    )
-                                    .cornerRadius(8)
+            .safeAreaInset(edge: .top, alignment: .trailing) {
+                if iap.didCheckPremium && !iap.isPremium && !showPremiumView {
+                    HStack(spacing: 10) {
+                        Text(creditManager.creditDisplayText())
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(
+                                          LinearGradient(colors: [Color.gray.opacity(0.9), Color.gray.opacity(0.72)], startPoint: .top, endPoint: .bottom))
+                                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                            )
+
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.1)) {
+                                showPremiumView = true
                             }
+                        }) {
+                            Text("Upgrade")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(minWidth: 86, minHeight: 36)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color.fromHex("#16A34A"),
+                                                    Color.fromHex("#06B6D4")
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                                        )
+                                        .shadow(color: Color.fromHex("#0E9F6E").opacity(0.35), radius: 4, x: 0, y: 2)
+                                )
                         }
-                        .padding(.top, 8)
-                        .padding(.bottom, 8)
-                        .padding(.trailing, 8)
-                        .opacity(showPremiumView ? 0 : 1)
+                        .fixedSize()
+                        .layoutPriority(2)
                     }
+                    .padding(.trailing, 12)
+                    .padding(.top, 6)
                 }
             }
         }

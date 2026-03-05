@@ -1,5 +1,48 @@
 import SwiftUI
 
+private enum PaywallTheme {
+    static let primaryStart = Color.fromHex("#06B6D4")
+    static let primaryEnd = Color.fromHex("#2563EB")
+    static let warningStart = Color.fromHex("#F59E0B")
+    static let warningEnd = Color.fromHex("#D97706")
+
+    static func headerGradient(for cs: ColorScheme) -> [Color] {
+        cs == .dark
+        ? [Color.fromHex("#0B3A4A"), Color.fromHex("#1E3A8A"), Color.fromHex("#1D4ED8")]
+        : [Color.fromHex("#06B6D4"), Color.fromHex("#3B82F6"), Color.fromHex("#2563EB")]
+    }
+
+    static func surface(for cs: ColorScheme) -> Color {
+        cs == .dark ? Color.fromHex("#111827") : .white
+    }
+
+    static func secondarySurface(for cs: ColorScheme) -> Color {
+        cs == .dark ? Color.fromHex("#1F2937") : Color.fromHex("#F3F4F6")
+    }
+
+    static func primaryText(for cs: ColorScheme) -> Color {
+        cs == .dark ? Color.fromHex("#F9FAFB") : Color.fromHex("#0F172A")
+    }
+
+    static func secondaryText(for cs: ColorScheme) -> Color {
+        cs == .dark ? Color.fromHex("#94A3B8") : Color.fromHex("#475569")
+    }
+
+    static func selectedRowFill(for cs: ColorScheme) -> LinearGradient {
+        LinearGradient(
+            colors: cs == .dark
+                ? [Color.fromHex("#0E2F3A"), Color.fromHex("#1E2F5C")]
+                : [Color.fromHex("#EAFBFF"), Color.fromHex("#EEF3FF")],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    static func unselectedRowBorder(for cs: ColorScheme) -> Color {
+        cs == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.08)
+    }
+}
+
 /// Shared pay-wall that can be used during onboarding or inside the main app.
 /// It is intentionally self-contained so other screens only need to provide a
 /// closure for the close action.
@@ -50,10 +93,18 @@ struct PaywallView: View {
             // Close button
             Button(action: onClose) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.primary.opacity(0.6))
-                    .padding(12)
-                    .background(.thinMaterial, in: Circle())
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.primary.opacity(0.9))
+                    .padding(10)
+                    .background(
+                        Circle()
+                            .fill(.thinMaterial)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white.opacity(colorScheme == .dark ? 0.28 : 0.5), lineWidth: 1)
+                            )
+                    )
+                    .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 1)
             }
             .padding(.trailing, 16)
             .padding(.top, 8)
@@ -74,7 +125,7 @@ struct PaywallView: View {
                         Color.black.opacity(0.4)
                             .ignoresSafeArea()
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
+                            .progressViewStyle(CircularProgressViewStyle(tint: PaywallTheme.primaryEnd))
                             .scaleEffect(1.5)
                     }
                 }
@@ -91,9 +142,14 @@ private struct HeaderView: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                gradient: Gradient(colors: cs == .dark ? [Color.fromHex("#4430f2"), Color.fromHex("#2d1dd8"), Color.fromHex("#1a0f7a")] : [Color.accentColor, Color.accentColor.opacity(0.8), Color.accentColor.opacity(0.6)]),
+                gradient: Gradient(colors: PaywallTheme.headerGradient(for: cs)),
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
+            )
+            LinearGradient(
+                colors: [Color.black.opacity(cs == .dark ? 0.22 : 0.08), Color.clear],
+                startPoint: .bottom,
+                endPoint: .top
             )
             VStack(spacing: 20) {
                 Image("appicon")
@@ -107,12 +163,12 @@ private struct HeaderView: View {
                     Text(NSLocalizedString("paywall-title", comment: ""))
                         .font(.system(size: 28, weight: .bold))
                         .multilineTextAlignment(.center)
-                        .foregroundColor(cs == .dark ? Color.fromHex("#00e17b") : .white)
+                        .foregroundColor(.white)
                     
                     Text("Get Detailed Step by Step Solution")
                         .font(.system(size: 16, weight: .medium))
                         .multilineTextAlignment(.center)
-                        .foregroundColor(cs == .dark ? Color.fromHex("#00e17b").opacity(0.8) : .white.opacity(0.8))
+                        .foregroundColor(.white.opacity(0.88))
                 }
             }
             .padding(.top, 20)
@@ -121,6 +177,7 @@ private struct HeaderView: View {
 }
 
 private struct PaywallBenefitsView: View {
+    @Environment(\.colorScheme) private var colorScheme
     private let benefits: [String] = ["paywall-bulletpointhree", "paywall-bulletpointone", "paywall-bulletpointfour"]
     
     var body: some View {
@@ -129,12 +186,12 @@ private struct PaywallBenefitsView: View {
                 HStack(spacing: 16) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(.green)
+                        .foregroundColor(PaywallTheme.primaryStart)
                         .frame(width: 24, height: 24)
                     
                     Text(LocalizedStringKey(key))
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.primary)
+                        .foregroundColor(PaywallTheme.primaryText(for: colorScheme))
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -274,13 +331,13 @@ private struct PaywallPlanRow: View {
                 // Radio button
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(isSelected ? .accentColor : .gray)
+                    .foregroundColor(isSelected ? PaywallTheme.primaryEnd : PaywallTheme.secondaryText(for: colorScheme))
                 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(title)
                             .font(.system(size: isPrimary ? 19 : 17, weight: isTrialOffer ? .bold : .semibold))
-                            .foregroundColor(isTrialOffer ? (colorScheme == .dark ? .accentColor.lighten() : .accentColor) : .primary)
+                            .foregroundColor(PaywallTheme.primaryText(for: colorScheme))
                         
                         Spacer()
                         
@@ -292,7 +349,7 @@ private struct PaywallPlanRow: View {
                                 .padding(.vertical, 2)
                                 .background(
                                     LinearGradient(
-                                        gradient: Gradient(colors: [Color.orange, Color.red]),
+                                        gradient: Gradient(colors: [PaywallTheme.warningStart, PaywallTheme.warningEnd]),
                                         startPoint: .leading,
                                         endPoint: .trailing
                                     )
@@ -303,11 +360,11 @@ private struct PaywallPlanRow: View {
                     
                     Text(subtitle)
                         .font(.system(size: isPrimary ? 14 : 13))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(PaywallTheme.secondaryText(for: colorScheme))
                     
                     Text(priceText)
                         .font(.system(size: isPrimary ? 17 : 15, weight: .medium))
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(isSelected ? .white : PaywallTheme.primaryStart)
                 }
                 
                 Spacer()
@@ -318,15 +375,11 @@ private struct PaywallPlanRow: View {
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(isSelected ? 
-                        LinearGradient(
-                            colors: [Color.accentColor.opacity(0.15), Color.accentColor.opacity(0.05)],
-                          startPoint: .bottomTrailing ,
-                                endPoint: .topLeading
-                        ) : 
+                        PaywallTheme.selectedRowFill(for: colorScheme) :
                         LinearGradient(
                             colors: [
-                                colorScheme == .dark ? Color.gray.opacity(0.1) : Color.white,
-                                colorScheme == .dark ? Color.gray.opacity(0.1) : Color.white
+                                PaywallTheme.surface(for: colorScheme),
+                                PaywallTheme.surface(for: colorScheme)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -338,19 +391,19 @@ private struct PaywallPlanRow: View {
                     .stroke(
                         isSelected ? 
                             LinearGradient(
-                                colors: [Color.accentColor, Color.accentColor.opacity(0.6)],
+                                colors: [PaywallTheme.primaryStart, PaywallTheme.primaryEnd],
                                 startPoint: .bottomTrailing ,
                                 endPoint: .topLeading
                             ) :
                             LinearGradient(
-                                colors: [Color.gray.opacity(0.3), Color.gray.opacity(0.3)],
+                                colors: [PaywallTheme.unselectedRowBorder(for: colorScheme), PaywallTheme.unselectedRowBorder(for: colorScheme)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
                         lineWidth: isSelected ? 2 : 1
                     )
             )
-            .shadow(color: isSelected ? Color.accentColor.opacity(isPrimary ? 0.24 : 0.18) : Color.clear, radius: isPrimary ? 10 : 6, x: 0, y: 4)
+            .shadow(color: isSelected ? PaywallTheme.primaryStart.opacity(colorScheme == .dark ? 0.12 : (isPrimary ? 0.22 : 0.17)) : Color.clear, radius: isPrimary ? 8 : 5, x: 0, y: 3)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -379,7 +432,7 @@ private struct PaywallContinueButton: View {
             if vm.selectedPlan == .yearly && iap.introductoryOfferDetails(for: .yearly) != nil {
                 HStack(spacing: 8) {
                     Image(systemName: "gift.fill")
-                        .foregroundColor(.green)
+                        .foregroundColor(PaywallTheme.primaryStart)
                         .font(.system(size: 16, weight: .medium))
                     Text("No payment now • Cancel anytime")
                         .font(.system(size: 15, weight: .medium))
@@ -389,16 +442,16 @@ private struct PaywallContinueButton: View {
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.green.opacity(0.1))
+                        .fill(PaywallTheme.primaryStart.opacity(0.12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color.green.opacity(0.3), lineWidth: 1)
+                                .stroke(PaywallTheme.primaryStart.opacity(0.35), lineWidth: 1)
                         )
                 )
             } else if vm.selectedPlan == .weekly {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.shield.fill")
-                        .foregroundColor(.blue)
+                        .foregroundColor(PaywallTheme.primaryEnd)
                         .font(.system(size: 16, weight: .medium))
                     Text("Cancel anytime • No commitment")
                         .font(.system(size: 15, weight: .medium))
@@ -408,10 +461,10 @@ private struct PaywallContinueButton: View {
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.blue.opacity(0.1))
+                        .fill(PaywallTheme.primaryEnd.opacity(0.12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+                                .stroke(PaywallTheme.primaryEnd.opacity(0.35), lineWidth: 1)
                         )
                 )
             }
@@ -428,37 +481,30 @@ private struct PaywallContinueButton: View {
                     if vm.selectedPlan == .yearly && iap.introductoryOfferDetails(for: .yearly) != nil {
                         Image(systemName: "sparkles")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(Color.fromHex("#111827"))
                     }
                     
                     Text(buttonText)
                         .font(.system(size: 19, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.fromHex("#111827"))
                     
                     Image(systemName: "arrow.right")
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.fromHex("#111827"))
                     
                     Spacer()
                 }
                 .frame(height: 56)
                 .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [
-                            Color.accentColor,
-                            Color.accentColor.opacity(0.8)
-                        ]),
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+                    Color.white
                 )
                 .cornerRadius(16)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.white.opacity(0.25), lineWidth: 1.5)
+                        .stroke(Color.black.opacity(0.08), lineWidth: 1.5)
                 )
-                .shadow(color: Color.accentColor.opacity(0.5), radius: 16, x: 0, y: 8)
-                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 4)
+                .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
                 .scaleEffect(isPressed ? 0.97 : 1.0)
             }
             .scaleEffect(isDisabled ? 0.95 : 1.0)
@@ -514,11 +560,11 @@ private struct LegalTextView: View {
             HStack(spacing: 20) {
                 Link("Terms of Service", destination: URL(string: "https://verby.co/math")!)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(PaywallTheme.primaryEnd)
                 
                 Link("Privacy Policy", destination: URL(string: "https://verby.co/math/privacy")!)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.accentColor)
+                    .foregroundColor(PaywallTheme.primaryEnd)
             }
             
         }
