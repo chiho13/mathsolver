@@ -302,12 +302,12 @@ private struct PlanCardSection: View {
                 isPrimary: false
             )
 
-            if vm.selectedPlan == .yearly {
-                Text("Most users choose Annual to save more")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            // if vm.selectedPlan == .yearly {
+            //     Text("Most users choose Annual to save more")
+            //         .font(.system(size: 13, weight: .medium))
+            //         .foregroundColor(.secondary)
+            //         .frame(maxWidth: .infinity, alignment: .leading)
+            // }
         }
         .padding(.horizontal, 20)
     }
