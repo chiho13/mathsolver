@@ -454,6 +454,7 @@ struct ContentView: View {
 
                     showSolutionSheet = true
                     viewModel.isAnimatingCroppedArea = false
+                    creditManager.scheduleReviewRequestAfterSolutionShownIfEligible()
                 }
             }
             .onChange(of: viewModel.errorMessage) { _, newError in
@@ -467,6 +468,7 @@ struct ContentView: View {
                 }
             }
             .sheet(isPresented: $showSolutionSheet, onDismiss: {
+                creditManager.cancelPendingReviewRequest()
                 // All state cleanup now happens here, when the user is truly done
                 originalImage = nil
                 croppedImage = nil

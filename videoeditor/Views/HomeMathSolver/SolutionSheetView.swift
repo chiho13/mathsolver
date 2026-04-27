@@ -44,7 +44,9 @@ struct SolutionSheetView: View {
                             FormattedText(text: visionResponse)
                                 .padding(.horizontal, 16)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                        }.padding(.horizontal, 16)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 16)
                     }
                     .scrollIndicators(.visible)
                     

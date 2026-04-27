@@ -6,7 +6,9 @@
 //
 
 import Foundation
+import StoreKit
 import SwiftUI
+import UIKit
 
 @MainActor
 class CreditManager: ObservableObject {
@@ -16,12 +18,26 @@ class CreditManager: ObservableObject {
     private let userDefaults = UserDefaults.standard
     private let creditsKey = "previewCredits"
     private let firstLaunchKey = "creditFirstLaunch"
+    private let reviewTotalCompletedSessionsKey = "reviewTotalCompletedSessions"
+    private let reviewCompletedSessionsSincePromptKey = "reviewCompletedSessionsSincePrompt"
+    private let reviewLastPromptVersionKey = "reviewLastPromptVersion"
+    private let reviewLastPromptTimestampKey = "reviewLastPromptTimestamp"
     
     // Configuration
     private let initialCredits = 4 // Give users 3 free math solutions
+    private let reviewMinCompletedSessions = 3
+    private let reviewCooldownDays = 30
+    private let reviewRequestDelay: TimeInterval = 5
+    
+    private var reviewTotalCompletedSessions: Int = 0
+    private var reviewCompletedSessionsSincePrompt: Int = 0
+    private var reviewLastPromptVersion: String = ""
+    private var reviewLastPromptTimestamp: TimeInterval = 0
+    private var pendingReviewRequest: DispatchWorkItem?
     
     init() {
         loadCredits()
+        loadReviewPromptState()
     }
     
     /// Load credits from UserDefaults
@@ -46,6 +62,20 @@ class CreditManager: ObservableObject {
         userDefaults.set(remainingCredits, forKey: creditsKey)
         hasCredits = remainingCredits > 0
         print("CreditManager: Saved \(remainingCredits) credits")
+    }
+    
+    private func loadReviewPromptState() {
+        reviewTotalCompletedSessions = userDefaults.integer(forKey: reviewTotalCompletedSessionsKey)
+        reviewCompletedSessionsSincePrompt = userDefaults.integer(forKey: reviewCompletedSessionsSincePromptKey)
+        reviewLastPromptVersion = userDefaults.string(forKey: reviewLastPromptVersionKey) ?? ""
+        reviewLastPromptTimestamp = userDefaults.double(forKey: reviewLastPromptTimestampKey)
+    }
+    
+    private func saveReviewPromptState() {
+        userDefaults.set(reviewTotalCompletedSessions, forKey: reviewTotalCompletedSessionsKey)
+        userDefaults.set(reviewCompletedSessionsSincePrompt, forKey: reviewCompletedSessionsSincePromptKey)
+        userDefaults.set(reviewLastPromptVersion, forKey: reviewLastPromptVersionKey)
+        userDefaults.set(reviewLastPromptTimestamp, forKey: reviewLastPromptTimestampKey)
     }
     
     /// Use one credit (call before solving math problem)
@@ -90,5 +120,63 @@ class CreditManager: ObservableObject {
         remainingCredits += amount
         saveCredits()
         print("CreditManager: Added \(amount) credits, total: \(remainingCredits)")
+    }
+    
+    func scheduleReviewRequestAfterSolutionShownIfEligible() {
+        pendingReviewRequest?.cancel()
+        
+        reviewTotalCompletedSessions += 1
+        reviewCompletedSessionsSincePrompt += 1
+        
+        guard reviewTotalCompletedSessions >= reviewMinCompletedSessions else {
+            saveReviewPromptState()
+            return
+        }
+        
+        guard reviewCompletedSessionsSincePrompt >= reviewMinCompletedSessions else {
+            saveReviewPromptState()
+            return
+        }
+        
+        let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        guard reviewLastPromptVersion != currentVersion else {
+            saveReviewPromptState()
+            return
+        }
+        
+        if reviewLastPromptTimestamp > 0 {
+            let lastPromptDate = Date(timeIntervalSince1970: reviewLastPromptTimestamp)
+            let daysSincePrompt = Date().timeIntervalSince(lastPromptDate) / 86_400
+            guard daysSincePrompt >= Double(reviewCooldownDays) else {
+                saveReviewPromptState()
+                return
+            }
+        }
+        
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            guard
+                let scene = UIApplication.shared.connectedScenes
+                    .compactMap({ $0 as? UIWindowScene })
+                    .first(where: { $0.activationState == .foregroundActive })
+            else {
+                return
+            }
+            
+            self.reviewLastPromptTimestamp = Date().timeIntervalSince1970
+            self.reviewLastPromptVersion = currentVersion
+            self.reviewCompletedSessionsSincePrompt = 0
+            self.saveReviewPromptState()
+            SKStoreReviewController.requestReview(in: scene)
+            self.pendingReviewRequest = nil
+        }
+        
+        pendingReviewRequest = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + reviewRequestDelay, execute: workItem)
+    }
+    
+    func cancelPendingReviewRequest() {
+        pendingReviewRequest?.cancel()
+        pendingReviewRequest = nil
     }
 }

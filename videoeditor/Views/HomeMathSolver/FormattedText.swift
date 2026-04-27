@@ -12,7 +12,7 @@ struct MathLabel: UIViewRepresentable {
         label.fontSize = 18 // Harmonized font size
         label.font = MTFontManager().xitsFont(withSize: 18) // Harmonized font size
         label.textColor = .label
-        label.textAlignment = .left
+        label.textAlignment = mode == .display ? .center : .left
         label.labelMode = mode
         label.latex = latex
         label.contentInsets = UIEdgeInsets(top: mode == .display ? 5 : 0, left: 0, bottom: mode == .display ? 5 : 0, right: 0) // Adjusted padding
@@ -26,6 +26,92 @@ struct MathLabel: UIViewRepresentable {
     func updateUIView(_ uiView: MTMathUILabel, context: Context) {
         uiView.latex = latex
         uiView.labelMode = mode
+        uiView.textAlignment = mode == .display ? .center : .left
+    }
+}
+
+private struct FittedDisplayMathLabel: UIViewRepresentable {
+    var latex: String
+
+    func makeUIView(context: Context) -> ScalingMathContainerView {
+        let view = ScalingMathContainerView()
+        view.configure(latex: latex)
+        return view
+    }
+
+    func updateUIView(_ uiView: ScalingMathContainerView, context: Context) {
+        uiView.configure(latex: latex)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: ScalingMathContainerView, context: Context) -> CGSize? {
+        uiView.fittingSize(forWidth: proposal.width)
+    }
+}
+
+private final class ScalingMathContainerView: UIView {
+    private let label = MTMathUILabel()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        commonInit()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        commonInit()
+    }
+
+    func configure(latex: String) {
+        if label.latex != latex {
+            label.latex = latex
+            setNeedsLayout()
+            invalidateIntrinsicContentSize()
+        }
+    }
+
+    func fittingSize(forWidth proposedWidth: CGFloat?) -> CGSize {
+        let intrinsicSize = normalizedIntrinsicSize()
+        let availableWidth = max((proposedWidth ?? intrinsicSize.width), 1)
+        let scale = min(1, availableWidth / intrinsicSize.width)
+
+        return CGSize(
+            width: availableWidth,
+            height: max(intrinsicSize.height * scale, 1)
+        )
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+
+        let intrinsicSize = normalizedIntrinsicSize()
+        let availableWidth = max(bounds.width, 1)
+        let scale = min(1, availableWidth / intrinsicSize.width)
+
+        label.transform = .identity
+        label.bounds = CGRect(origin: .zero, size: intrinsicSize)
+        label.center = CGPoint(x: bounds.midX, y: bounds.midY)
+        label.transform = CGAffineTransform(scaleX: scale, y: scale)
+    }
+
+    private func commonInit() {
+        backgroundColor = .clear
+        clipsToBounds = true
+
+        label.fontSize = 18
+        label.font = MTFontManager().xitsFont(withSize: 18)
+        label.textColor = .label
+        label.textAlignment = .center
+        label.labelMode = .display
+        label.contentInsets = UIEdgeInsets(top: 5, left: 0, bottom: 5, right: 0)
+        addSubview(label)
+    }
+
+    private func normalizedIntrinsicSize() -> CGSize {
+        let intrinsicSize = label.intrinsicContentSize
+        return CGSize(
+            width: max(intrinsicSize.width, 1),
+            height: max(intrinsicSize.height, 1)
+        )
     }
 }
 
@@ -380,8 +466,7 @@ struct FormattedText: View {
                                         } else {
                                             // Block LaTeX is centered
                                             let part = group.parts.first!
-                                            MathLabel(latex: part.value, mode: .display)
-                                                .fixedSize(horizontal: false, vertical: true)
+                                            FittedDisplayMathLabel(latex: part.value)
                                                 .frame(maxWidth: .infinity, alignment: .center)
                                                 .padding(.vertical, 10)
                                         }
