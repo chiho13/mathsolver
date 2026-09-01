@@ -8,6 +8,7 @@ import Mantis
 
 struct ContentView: View {
     @StateObject private var viewModel = VisionViewModel()
+    private let onResetDefaults: () -> Void
     @State private var isLoading: Bool = false
     @State private var errorMessage: String? = nil
     @State private var showPremiumView: Bool = false
@@ -47,6 +48,10 @@ struct ContentView: View {
     @State private var shouldAnimateImagePosition: Bool = false
     // Predefined prompt for math solving
     private let mathPrompt = "Solve the math problem in the image"
+
+    init(onResetDefaults: @escaping () -> Void = {}) {
+        self.onResetDefaults = onResetDefaults
+    }
 
     var body: some View {
         NavigationStack {
@@ -369,8 +374,6 @@ struct ContentView: View {
         HStack(spacing: 8) {
             Text("Solve")
                 .font(.system(size: 18, weight: .semibold))
-            Image(systemName: "sparkles")
-                .font(.system(size: 16, weight: .semibold))
         }
         .foregroundColor(.white)
         .frame(width: 110, height: 52)
@@ -513,55 +516,90 @@ struct ContentView: View {
                     }
                 }
             }
-            .safeAreaInset(edge: .top, alignment: .trailing) {
-                if iap.didCheckPremium && !iap.isPremium && !showPremiumView {
-                    HStack(spacing: 10) {
-                        Text(creditManager.creditDisplayText())
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .fill(
-                                          LinearGradient(colors: [Color.gray.opacity(0.9), Color.gray.opacity(0.72)], startPoint: .top, endPoint: .bottom))
-                                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
-                            )
-
+            .safeAreaInset(edge: .top) {
+                HStack(alignment: .top) {
+#if DEBUG
+                    VStack(alignment: .leading, spacing: 6) {
                         Button(action: {
-                            withAnimation(.easeInOut(duration: 0.1)) {
-                                showPremiumView = true
-                            }
+                            creditManager.resetCreditsForDebug()
                         }) {
-                            Text("Upgrade")
-                                .font(.system(size: 15, weight: .semibold))
+                            Label("Reset Credits", systemImage: "arrow.counterclockwise")
+                                .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(.white)
-                                .frame(minWidth: 86, minHeight: 36)
+                                .padding(.horizontal, 10)
+                                .frame(minHeight: 32)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [
-                                                    Color.fromHex("#16A34A"),
-                                                    Color.fromHex("#06B6D4")
-                                                ],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
-                                        )
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                                .stroke(Color.white.opacity(0.22), lineWidth: 1)
-                                        )
-                                        .shadow(color: Color.fromHex("#0E9F6E").opacity(0.35), radius: 4, x: 0, y: 2)
+                                    Capsule()
+                                        .fill(Color.orange.opacity(0.92))
                                 )
                         }
-                        .fixedSize()
-                        .layoutPriority(2)
+
+                        Button(action: {
+                            UserDefaults.resetDefaults()
+                            onResetDefaults()
+                        }) {
+                            Label("Reset Defaults", systemImage: "arrow.uturn.backward.circle")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .frame(minHeight: 32)
+                            .background(
+                                Capsule()
+                                    .fill(Color.red.opacity(0.88))
+                            )
+                        }
                     }
-                    .padding(.trailing, 12)
-                    .padding(.top, 6)
+#endif
+
+                    Spacer()
+
+                    if iap.didCheckPremium && !iap.isPremium && !showPremiumView {
+                        HStack(spacing: 0) {
+                            Text(
+                                creditManager.remainingCredits == 0
+                                    ? "No scans left"
+                                    : "\(creditManager.remainingCredits) \(creditManager.remainingCredits == 1 ? "scan" : "scans") left"
+                            )
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    showPremiumView = true
+                                }
+                            }) {
+                                HStack(spacing: 6) {
+                                    Text("Upgrade")
+                                        .font(.system(size: 13, weight: .bold))
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 10, weight: .bold))
+                                }
+                                .foregroundStyle(Color.fromHex("#123B30"))
+                                .padding(.horizontal, 12)
+                                .frame(height: 44)
+                                .background(Color.fromHex("#DDF8F0").opacity(0.96))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .fixedSize()
+                        .frame(height: 44)
+                        .background(
+                            Color.black.opacity(0.62),
+                            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(0.24), radius: 10, y: 4)
+                        .accessibilityElement(children: .contain)
+                    }
                 }
+                .padding(.horizontal, 12)
+                .padding(.top, 6)
             }
         }
     }
@@ -699,12 +737,11 @@ struct ContentView: View {
 //    }
 //}
 
+#if DEBUG
 extension UserDefaults {
     static func resetDefaults() {
-        let defaults = UserDefaults.standard
-        let dictionary = defaults.dictionaryRepresentation()
-        dictionary.keys.forEach { key in
-            defaults.removeObject(forKey: key)
-        }
+        guard let bundleIdentifier = Bundle.main.bundleIdentifier else { return }
+        UserDefaults.standard.removePersistentDomain(forName: bundleIdentifier)
     }
 }
+#endif

@@ -50,6 +50,16 @@ final class FreeAllowanceLedger: FreeAllowanceLedgerProviding {
         saveMerged(candidateUsedTasks: usedTasks, now: now)
     }
 
+#if DEBUG
+    /// Removes the persisted allowance so the next bootstrap starts with all
+    /// free credits available. This is intentionally unavailable in Release.
+    @discardableResult
+    func resetForDebug() -> Bool {
+        let status = SecItemDelete(baseQuery() as CFDictionary)
+        return status == errSecSuccess || status == errSecItemNotFound
+    }
+#endif
+
     private func saveMerged(
         candidateUsedTasks: Int,
         now: Date

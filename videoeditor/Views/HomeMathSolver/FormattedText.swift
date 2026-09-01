@@ -30,21 +30,25 @@ struct MathLabel: UIViewRepresentable {
     }
 }
 
-private struct FittedDisplayMathLabel: UIViewRepresentable {
+private struct FittedMathLabel: UIViewRepresentable {
     var latex: String
+    var mode: MTMathUILabelMode
 
     func makeUIView(context: Context) -> ScalingMathContainerView {
         let view = ScalingMathContainerView()
-        view.configure(latex: latex)
+        view.configure(latex: latex, mode: mode)
         return view
     }
 
     func updateUIView(_ uiView: ScalingMathContainerView, context: Context) {
-        uiView.configure(latex: latex)
+        uiView.configure(latex: latex, mode: mode)
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView: ScalingMathContainerView, context: Context) -> CGSize? {
-        uiView.fittingSize(forWidth: proposal.width)
+        uiView.fittingSize(
+            forWidth: proposal.width,
+            expandsToAvailableWidth: mode == .display
+        )
     }
 }
 
@@ -61,21 +65,32 @@ private final class ScalingMathContainerView: UIView {
         commonInit()
     }
 
-    func configure(latex: String) {
+    func configure(latex: String, mode: MTMathUILabelMode) {
+        label.labelMode = mode
+        label.textAlignment = mode == .display ? .center : .left
+        label.contentInsets = UIEdgeInsets(
+            top: mode == .display ? 5 : 0,
+            left: 0,
+            bottom: mode == .display ? 5 : 0,
+            right: 0
+        )
+
         if label.latex != latex {
             label.latex = latex
-            setNeedsLayout()
-            invalidateIntrinsicContentSize()
         }
+
+        setNeedsLayout()
+        invalidateIntrinsicContentSize()
     }
 
-    func fittingSize(forWidth proposedWidth: CGFloat?) -> CGSize {
+    func fittingSize(forWidth proposedWidth: CGFloat?, expandsToAvailableWidth: Bool) -> CGSize {
         let intrinsicSize = normalizedIntrinsicSize()
         let availableWidth = max((proposedWidth ?? intrinsicSize.width), 1)
         let scale = min(1, availableWidth / intrinsicSize.width)
+        let renderedWidth = intrinsicSize.width * scale
 
         return CGSize(
-            width: availableWidth,
+            width: expandsToAvailableWidth ? availableWidth : renderedWidth,
             height: max(intrinsicSize.height * scale, 1)
         )
     }
@@ -172,16 +187,23 @@ struct FormattedText: View {
         var spacing: CGFloat
 
         func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-            let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+            let idealSizes = subviews.map { $0.sizeThatFits(.unspecified) }
+            let availableWidth = max(
+                proposal.width ?? idealSizes.map(\.width).max() ?? 1,
+                1
+            )
+            let sizes = measuredSizes(
+                for: subviews,
+                idealSizes: idealSizes,
+                availableWidth: availableWidth
+            )
             var totalHeight: CGFloat = 0
             var rowHeight: CGFloat = 0
             var currentRowWidth: CGFloat = 0
 
-            guard let proposedWidth = proposal.width else { return .zero }
-
             for size in sizes {
                 let requiredSpacing = currentRowWidth == 0 ? 0 : spacing
-                if currentRowWidth + requiredSpacing + size.width > proposedWidth {
+                if currentRowWidth > 0 && currentRowWidth + requiredSpacing + size.width > availableWidth {
                     totalHeight += rowHeight + spacing
                     rowHeight = size.height
                     currentRowWidth = size.width
@@ -191,11 +213,16 @@ struct FormattedText: View {
                 }
             }
             totalHeight += rowHeight
-            return CGSize(width: proposedWidth, height: totalHeight)
+            return CGSize(width: availableWidth, height: totalHeight)
         }
 
         func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-            let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+            let idealSizes = subviews.map { $0.sizeThatFits(.unspecified) }
+            let sizes = measuredSizes(
+                for: subviews,
+                idealSizes: idealSizes,
+                availableWidth: max(bounds.width, 1)
+            )
 
             var rows: [[(offset: Int, size: CGSize)]] = []
             var currentRow: [(offset: Int, size: CGSize)] = []
@@ -228,11 +255,32 @@ struct FormattedText: View {
                     subview.place(
                         at: CGPoint(x: x, y: y + verticalOffset),
                         anchor: .topLeading,
-                        proposal: .unspecified
+                        proposal: ProposedViewSize(
+                            width: item.size.width,
+                            height: item.size.height
+                        )
                     )
                     x += item.size.width + spacing
                 }
                 y += rowHeight + spacing
+            }
+        }
+
+        private func measuredSizes(
+            for subviews: Subviews,
+            idealSizes: [CGSize],
+            availableWidth: CGFloat
+        ) -> [CGSize] {
+            zip(subviews, idealSizes).map { subview, idealSize in
+                guard idealSize.width > availableWidth else { return idealSize }
+
+                let constrainedSize = subview.sizeThatFits(
+                    ProposedViewSize(width: availableWidth, height: nil)
+                )
+                return CGSize(
+                    width: min(max(constrainedSize.width, 1), availableWidth),
+                    height: max(constrainedSize.height, 1)
+                )
             }
         }
     }
@@ -445,28 +493,44 @@ struct FormattedText: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     ForEach(groupedParts, id: \.self) { group in
                                         if group.isInline {
-                                            // For inline content, use FlowLayout
-                                            FlowLayout(spacing: 4) {
-                                                ForEach(group.parts, id: \.self) { part in
-                                                    switch part.type {
-                                                    case .markdown:
-                                                        Markdown(part.value)
-                                                            .markdownTheme(inlineMarkdownTheme)
-                                                            .fixedSize() // Important for FlowLayout to know the size
-                                                            
-                                                    case .inlineLatex:
-                                                        MathLabel(latex: part.value, mode: .text)
-                                                            .fixedSize() // Important for FlowLayout
-                                                        
-                                                    default:
-                                                        EmptyView()
+                                            if group.parts.count == 1, let part = group.parts.first {
+                                                switch part.type {
+                                                case .markdown:
+                                                    Markdown(part.value)
+                                                        .markdownTheme(inlineMarkdownTheme)
+                                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                                        .fixedSize(horizontal: false, vertical: true)
+
+                                                case .inlineLatex:
+                                                    FittedMathLabel(latex: part.value, mode: .text)
+                                                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                                                case .blockLatex:
+                                                    EmptyView()
+                                                }
+                                            } else {
+                                                // Mixed prose and inline math needs a wrapping flow.
+                                                FlowLayout(spacing: 4) {
+                                                    ForEach(group.parts, id: \.self) { part in
+                                                        switch part.type {
+                                                        case .markdown:
+                                                            Markdown(part.value)
+                                                                .markdownTheme(inlineMarkdownTheme)
+                                                                .fixedSize(horizontal: false, vertical: true)
+
+                                                        case .inlineLatex:
+                                                            FittedMathLabel(latex: part.value, mode: .text)
+
+                                                        case .blockLatex:
+                                                            EmptyView()
+                                                        }
                                                     }
                                                 }
                                             }
                                         } else {
                                             // Block LaTeX is centered
                                             let part = group.parts.first!
-                                            FittedDisplayMathLabel(latex: part.value)
+                                            FittedMathLabel(latex: part.value, mode: .display)
                                                 .frame(maxWidth: .infinity, alignment: .center)
                                                 .padding(.vertical, 10)
                                         }

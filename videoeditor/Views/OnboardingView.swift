@@ -79,14 +79,14 @@ struct OnboardingView: View {
                                                     .scaledToFit()
                                                     .frame(width: 100, height: 100)
                                                     .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                                                    .shadow(color: (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.2), radius: 20, x: 0, y: 10)
+                                                    .shadow(color: Color.fromHex("#6EE7B7").opacity(0.12), radius: 20, x: 0, y: 10)
                                             } else {
                                                 ZStack {
                                                     Circle()
                                                         .fill(LinearGradient(
                                                             gradient: Gradient(colors: [
-                                                                (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.15),
-                                                                (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.05)
+                                                                Color.fromHex("#6EE7B7").opacity(0.12),
+                                                                Color.fromHex("#6EE7B7").opacity(0.04)
                                                             ]),
                                                             startPoint: .topLeading,
                                                             endPoint: .bottomTrailing
@@ -95,9 +95,9 @@ struct OnboardingView: View {
                                                     
                                                     Image(systemName: bulletPoint.iconName)
                                                         .font(.system(size: 44, weight: .medium))
-                                                        .foregroundColor(colorScheme == .dark ? Color.fromHex("#f7cbe3") : .accentColor)
+                                                        .foregroundColor(Color.fromHex("#6EE7B7").opacity(0.86))
                                                 }
-                                                .shadow(color: (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.2), radius: 20, x: 0, y: 10)
+                                                .shadow(color: Color.fromHex("#6EE7B7").opacity(0.12), radius: 20, x: 0, y: 10)
                                             }
                                             
                                             let localizedString = NSLocalizedString(bulletPoint.text, comment: "")
@@ -135,8 +135,8 @@ struct OnboardingView: View {
                                                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                                                     .fill(LinearGradient(
                                                         gradient: Gradient(colors: [
-                                                            (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.15),
-                                                            (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.08)
+                                                            (colorScheme == .dark ? Color.fromHex("#6EE7B7") : Color.accentColor).opacity(0.15),
+                                                            (colorScheme == .dark ? Color.fromHex("#6EE7B7") : Color.accentColor).opacity(0.08)
                                                         ]),
                                                         startPoint: .topLeading,
                                                         endPoint: .bottomTrailing
@@ -145,9 +145,9 @@ struct OnboardingView: View {
                                                 
                                                 Image(systemName: bulletPoint.iconName)
                                                     .font(.system(size: 20, weight: .semibold))
-                                                    .foregroundColor(colorScheme == .dark ? Color.fromHex("#f7cbe3") : .accentColor)
+                                                    .foregroundColor(colorScheme == .dark ? Color.fromHex("#6EE7B7").opacity(0.86) : .accentColor)
                                             }
-                                            .shadow(color: (colorScheme == .dark ? Color.fromHex("#f7cbe3") : Color.accentColor).opacity(0.15), radius: 8, x: 0, y: 4)
+                                            .shadow(color: (colorScheme == .dark ? Color.fromHex("#6EE7B7") : Color.accentColor).opacity(0.12), radius: 8, x: 0, y: 4)
                                             
                                             VStack(alignment: .leading, spacing: 4) {
                                                 Text(LocalizedStringKey(bulletPoint.text))
@@ -246,9 +246,9 @@ struct OnboardingView: View {
             colorScheme == .dark ?
                 LinearGradient(
                     gradient: Gradient(colors: [
-                        Color.fromHex("#540e30").opacity(0.12),
-                        Color.fromHex("#1d031f").opacity(0.6),
-                        Color.black.opacity(0.9)
+                        Color.fromHex("#0B1713"),
+                        Color.fromHex("#080D0B"),
+                        Color.fromHex("#050706")
                     ]),
                     startPoint: .top,
                     endPoint: .bottom
@@ -309,26 +309,15 @@ struct OnboardingView: View {
             HStack(spacing: 12) {
                 Spacer()
                 Text("Continue")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(.system(size: 17, weight: .bold))
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(.system(size: 16, weight: .bold))
                 Spacer()
             }
-            .padding(.vertical, 16)
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.accentColor,
-                        Color.accentColor.opacity(0.8)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .cornerRadius(12)
-            .shadow(color: Color.accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
+            .foregroundStyle(Color.fromHex("#092018"))
+            .frame(height: 56)
+            .background(Color.fromHex("#6EE7B7"))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(PressableButtonStyle())
     }
@@ -343,26 +332,15 @@ struct OnboardingView: View {
             HStack(spacing: 12) {
                 Spacer()
                 Text(self.currentIndex == 0 ? "Get Started" : "Continue")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(.system(size: 17, weight: .bold))
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(.system(size: 16, weight: .bold))
                 Spacer()
             }
-            .padding(.vertical, 16)
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.accentColor,
-                        Color.accentColor.opacity(0.8)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .cornerRadius(12)
-            .shadow(color: Color.accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
+            .foregroundStyle(Color.fromHex("#092018"))
+            .frame(height: 56)
+            .background(Color.fromHex("#6EE7B7"))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(PressableButtonStyle())
     }

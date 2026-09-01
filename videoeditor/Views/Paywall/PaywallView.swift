@@ -1,229 +1,299 @@
 import SwiftUI
+import UIKit
 
 private enum PaywallTheme {
-    static let primaryStart = Color.fromHex("#06B6D4")
-    static let primaryEnd = Color.fromHex("#2563EB")
-    static let warningStart = Color.fromHex("#F59E0B")
-    static let warningEnd = Color.fromHex("#D97706")
+    static let mint = Color.fromHex("#6EE7B7")
+    static let mintStrong = Color.fromHex("#158A54")
+    static let ink = Color.fromHex("#092018")
 
-    static func headerGradient(for cs: ColorScheme) -> [Color] {
-        cs == .dark
-        ? [Color.fromHex("#0B3A4A"), Color.fromHex("#1E3A8A"), Color.fromHex("#1D4ED8")]
-        : [Color.fromHex("#06B6D4"), Color.fromHex("#3B82F6"), Color.fromHex("#2563EB")]
+    static func background(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? Color.fromHex("#080B0A") : Color.fromHex("#F5F7F6")
     }
 
-    static func surface(for cs: ColorScheme) -> Color {
-        cs == .dark ? Color.fromHex("#111827") : .white
+    static func surface(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? Color.fromHex("#151A18") : .white
     }
 
-    static func secondarySurface(for cs: ColorScheme) -> Color {
-        cs == .dark ? Color.fromHex("#1F2937") : Color.fromHex("#F3F4F6")
+    static func accent(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? mint : mintStrong
     }
 
-    static func primaryText(for cs: ColorScheme) -> Color {
-        cs == .dark ? Color.fromHex("#F9FAFB") : Color.fromHex("#0F172A")
+    static func border(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.08)
     }
 
-    static func secondaryText(for cs: ColorScheme) -> Color {
-        cs == .dark ? Color.fromHex("#94A3B8") : Color.fromHex("#475569")
-    }
+}
 
-    static func selectedRowFill(for cs: ColorScheme) -> LinearGradient {
-        LinearGradient(
-            colors: cs == .dark
-                ? [Color.fromHex("#0E2F3A"), Color.fromHex("#1E2F5C")]
-                : [Color.fromHex("#EAFBFF"), Color.fromHex("#EEF3FF")],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
+private struct PaywallHeroBackground: View {
+    var body: some View {
+        ZStack {
+            Color.fromHex("#07100D")
 
-    static func unselectedRowBorder(for cs: ColorScheme) -> Color {
-        cs == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.08)
+            LinearGradient(
+                colors: [
+                    Color.fromHex("#5EEAD4").opacity(0.16),
+                    Color.fromHex("#6EE7B7").opacity(0.10),
+                    .clear
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        }
     }
 }
 
-/// Shared pay-wall that can be used during onboarding or inside the main app.
-/// It is intentionally self-contained so other screens only need to provide a
-/// closure for the close action.
+private struct PaywallScannerDecoration: View {
+    private struct Dot {
+        let x: CGFloat
+        let y: CGFloat
+        let phase: Double
+    }
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let scanLegDuration = 0.45
+    private let scanPauseDuration = 3.0
+
+    private let dots = [
+        Dot(x: 0.08, y: 0.24, phase: 0.2),
+        Dot(x: 0.17, y: 0.72, phase: 1.4),
+        Dot(x: 0.29, y: 0.38, phase: 2.6),
+        Dot(x: 0.38, y: 0.82, phase: 3.8),
+        Dot(x: 0.49, y: 0.18, phase: 4.7),
+        Dot(x: 0.58, y: 0.68, phase: 5.5),
+        Dot(x: 0.68, y: 0.34, phase: 0.9),
+        Dot(x: 0.77, y: 0.79, phase: 2.1),
+        Dot(x: 0.86, y: 0.22, phase: 3.2),
+        Dot(x: 0.93, y: 0.58, phase: 4.3)
+    ]
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: reduceMotion)) { timeline in
+            GeometryReader { geometry in
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                let scanMotionDuration = scanLegDuration * 2
+                let cycleDuration = scanMotionDuration + scanPauseDuration
+                let cyclePosition = time.truncatingRemainder(dividingBy: cycleDuration)
+                let isScanning = cyclePosition < scanMotionDuration
+                let motionProgress = min(cyclePosition / scanMotionDuration, 1)
+                let scanProgress = reduceMotion
+                    ? 0.5
+                    : isScanning
+                        ? 0.5 - (0.5 * cos(motionProgress * 2 * Double.pi))
+                        : 0
+                let fadeIn = min(cyclePosition / 0.10, 1)
+                let fadeOut = min((scanMotionDuration - cyclePosition) / 0.14, 1)
+                let scanOpacity = reduceMotion
+                    ? 0.35
+                    : isScanning ? max(0, min(fadeIn, fadeOut)) : 0
+
+                ZStack {
+                    ForEach(dots.indices, id: \.self) { index in
+                        let dot = dots[index]
+                        let pulse = reduceMotion ? 1.0 : 1.0 + (0.12 * sin(time + dot.phase))
+
+                        Circle()
+                            .fill(.white.opacity(0.16))
+                            .frame(width: 4, height: 4)
+                            .scaleEffect(pulse)
+                            .position(
+                                x: geometry.size.width * dot.x,
+                                y: geometry.size.height * dot.y
+                            )
+                    }
+
+                    Rectangle()
+                        .fill(PaywallTheme.mint.opacity(0.55))
+                        .frame(width: 2, height: geometry.size.height * 0.72)
+                        .opacity(scanOpacity)
+                        .position(
+                            x: 12 + ((geometry.size.width - 24) * scanProgress),
+                            y: geometry.size.height / 2
+                        )
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Shared subscription screen used during onboarding and from the main app.
 struct PaywallView: View {
     @EnvironmentObject private var iap: IAPManager
     @Environment(\.colorScheme) private var colorScheme
-
     @StateObject private var vm = PaywallVM()
 
-    /// Called when the user taps the X button or when a purchase finishes.
-    let onClose: () -> Void
-    /// If `true`, the X button is visible from the start (onboarding case).
-    var showCloseImmediately: Bool = false
+    private let onClose: () -> Void
+
+    init(
+        onClose: @escaping () -> Void,
+        showCloseImmediately _: Bool = false
+    ) {
+        self.onClose = onClose
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
+            PaywallTheme.background(for: colorScheme)
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                PaywallHeroBackground()
+                    .frame(height: 220)
+                Spacer()
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 28) {
-                    Spacer().frame(height: 120) // Reduced spacer to allow content under header
+                VStack(spacing: 0) {
+                    PaywallHeroView()
 
-                    PaywallBenefitsView()
-                    .padding(.top, 100)
-                    
-//                    ValuePropositionView()
+                    VStack(spacing: 24) {
+                        PaywallBenefitsView()
 
-                    PlanCardSection()
+                        PlanCardSection()
+                            .environmentObject(vm)
+
+                        PaywallContinueButton(
+                            action: { await vm.purchase(iap: iap) },
+                            isDisabled: vm.isPurchasing
+                        )
                         .environmentObject(vm)
 
-                    PaywallContinueButton(action: {
-                        await vm.purchase(iap: iap)
-                    }, isDisabled: vm.isPurchasing)
-                    .environmentObject(vm)
+                        AuxButtonsBar(
+                            isDisabled: vm.isPurchasing,
+                            restoreAction: {
+                                Task { await vm.restore(iap: iap) }
+                            }
+                        )
 
-                    AuxButtonsBar(isDisabled: vm.isPurchasing, restoreAction: {
-                        Task { await vm.restore(iap: iap) }
-                    })
-
-                    LegalTextView(selectedPlan: vm.selectedPlan)
-                        .padding(.bottom, 24)
+                        LegalTextView(selectedPlan: vm.selectedPlan)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    .padding(.bottom, 28)
                 }
             }
-            
-            // Hero / header background - now overlays the scroll content
-            HeaderView()
-                .frame(maxHeight: 250)
-                .edgesIgnoringSafeArea(.top)
 
-            // Close button
             Button(action: onClose) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(.primary.opacity(0.9))
-                    .padding(10)
-                    .background(
-                        Circle()
-                            .fill(.thinMaterial)
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white.opacity(colorScheme == .dark ? 0.28 : 0.5), lineWidth: 1)
-                            )
-                    )
-                    .shadow(color: .black.opacity(0.18), radius: 4, x: 0, y: 1)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.88))
+                    .frame(width: 36, height: 36)
+                    .background(.white.opacity(0.10), in: Circle())
             }
-            .padding(.trailing, 16)
+            .accessibilityLabel("Close")
             .padding(.top, 8)
-           
+            .padding(.trailing, 16)
         }
         .alert(item: $vm.activeAlert) { alert in
             switch alert {
             case .success:
-                return Alert(title: Text(alert.title), message: Text(alert.message), dismissButton: .default(Text("OK"), action: onClose))
-            case .error(let msg):
-                return Alert(title: Text("Error"), message: Text(msg), dismissButton: .default(Text("OK")))
+                return Alert(
+                    title: Text(alert.title),
+                    message: Text(alert.message),
+                    dismissButton: .default(Text("OK"), action: onClose)
+                )
+            case .error(let message):
+                return Alert(
+                    title: Text("Error"),
+                    message: Text(message),
+                    dismissButton: .default(Text("OK"))
+                )
             }
         }
-        .overlay(
-            Group {
-                if vm.isPurchasing {
-                    ZStack {
-                        Color.black.opacity(0.4)
-                            .ignoresSafeArea()
+        .overlay {
+            if vm.isPurchasing {
+                ZStack {
+                    Color.black.opacity(0.42)
+                        .ignoresSafeArea()
+
+                    VStack(spacing: 16) {
                         ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: PaywallTheme.primaryEnd))
-                            .scaleEffect(1.5)
+                            .tint(.white)
+                            .scaleEffect(1.25)
+
+                        Text("Connecting to the App Store…")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
                     }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 20)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
                 }
             }
-        )
+        }
         .disabled(vm.isPurchasing)
     }
 }
 
-// MARK: - Subviews
-
-private struct HeaderView: View {
-    @Environment(\.colorScheme) private var cs
+private struct PaywallHeroView: View {
     var body: some View {
         ZStack {
-            LinearGradient(
-                gradient: Gradient(colors: PaywallTheme.headerGradient(for: cs)),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            LinearGradient(
-                colors: [Color.black.opacity(cs == .dark ? 0.22 : 0.08), Color.clear],
-                startPoint: .bottom,
-                endPoint: .top
-            )
-            VStack(spacing: 20) {
-                Image("appicon")
+            PaywallHeroBackground()
+            PaywallScannerDecoration()
+
+            VStack(spacing: 16) {
+                Image("Icon-App-60x60")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 100, height: 100)
-                    .cornerRadius(20)
-                    .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
-                
-                VStack(spacing: 8) {
-                    Text(NSLocalizedString("paywall-title", comment: ""))
-                        .font(.system(size: 28, weight: .bold))
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+
+                VStack(spacing: 9) {
+                    Text("Math Solver Pro")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
-                        .foregroundColor(.white)
-                    
-                    Text("Get Detailed Step by Step Solution")
-                        .font(.system(size: 16, weight: .medium))
+                        .minimumScaleFactor(0.85)
+
+                    Text("Unlimited scans and clear, step-by-step solutions.")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.68))
                         .multilineTextAlignment(.center)
-                        .foregroundColor(.white.opacity(0.88))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 14)
                 }
             }
-            .padding(.top, 20)
+            .padding(.horizontal, 24)
+            .padding(.top, 42)
+            .padding(.bottom, 27)
         }
+        .clipShape(
+            UnevenRoundedRectangle(
+                bottomLeadingRadius: 30,
+                bottomTrailingRadius: 30
+            )
+        )
     }
 }
 
 private struct PaywallBenefitsView: View {
-    @Environment(\.colorScheme) private var colorScheme
-    private let benefits: [String] = ["paywall-bulletpointhree", "paywall-bulletpointone", "paywall-bulletpointfour"]
-    
+    private let benefits = [
+        "Unlimited photo scans",
+        "Clear step-by-step explanations",
+        "Help from basic math to calculus"
+    ]
+
     var body: some View {
-        VStack(spacing: 16) {
-            ForEach(benefits, id: \.self) { key in
-                HStack(spacing: 16) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(PaywallTheme.primaryStart)
-                        .frame(width: 24, height: 24)
-                    
-                    Text(LocalizedStringKey(key))
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(PaywallTheme.primaryText(for: colorScheme))
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(benefits, id: \.self) { benefit in
+                HStack(spacing: 11) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(PaywallTheme.ink)
+                        .frame(width: 22, height: 22)
+                        .background(PaywallTheme.mint, in: Circle())
+
+                    Text(benefit)
+                        .font(.system(size: 15, weight: .semibold))
                 }
-                .padding(.horizontal, 4)
             }
         }
-        .padding(.horizontal, 48)
-        .padding(.top, 20)
-        .padding(.bottom, 20)
-        // .background(Color.primary.opacity(0.03))
-        // .cornerRadius(16)
-        // .overlay(
-        //     RoundedRectangle(cornerRadius: 16)
-        //         .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-        // )
-        .padding(.horizontal, 20)
-    }
-}
-
-private struct ValuePropositionView: View {
-    var body: some View {
-        VStack(spacing: 12) {
-            Text("Everything You Need")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.primary)
-            
-            Text("Join thousands of users who create professional PDFs every day")
-                .font(.system(size: 14))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -231,180 +301,152 @@ private struct PlanCardSection: View {
     @EnvironmentObject private var iap: IAPManager
     @EnvironmentObject private var vm: PaywallVM
 
-    private var savingsText: String {
+    private var savingsText: String? {
         guard let yearlyPrice = iap.getPrice(for: .yearly),
               let weeklyPrice = iap.getPrice(for: .weekly) else {
-            return "Best value - save 70%"
+            return nil
         }
-        
-        let yearlyPriceDouble = NSDecimalNumber(decimal: yearlyPrice).doubleValue
-        let weeklyPriceDouble = NSDecimalNumber(decimal: weeklyPrice).doubleValue
-        
-        let totalWeeklyCostForYear = weeklyPriceDouble * 52
-        if totalWeeklyCostForYear <= yearlyPriceDouble {
-            return "Best value - save 70%"
-        }
-        
-        let savings = totalWeeklyCostForYear - yearlyPriceDouble
-        let percentage = (savings / totalWeeklyCostForYear) * 100
-        
-        if percentage.isNaN || percentage.isInfinite || percentage <= 0 {
-            return "Best value - save 70%"
-        }
-        
-        return "Best value - save \(Int(percentage.rounded()))%"
+
+        let yearly = NSDecimalNumber(decimal: yearlyPrice).doubleValue
+        let annualizedWeekly = NSDecimalNumber(decimal: weeklyPrice).doubleValue * 52
+        guard yearly > 0, annualizedWeekly > yearly else { return nil }
+
+        let percentage = Int((((annualizedWeekly - yearly) / annualizedWeekly) * 100).rounded())
+        guard (1...99).contains(percentage) else { return nil }
+        return "Save \(percentage)%"
     }
 
-    private var yearlyEquivalentMonthlyText: String {
-        guard let yearlyPrice = iap.getPrice(for: .yearly) else { return "" }
-        let monthly = NSDecimalNumber(decimal: yearlyPrice).doubleValue / 12.0
+    private var monthlyPriceText: String? {
+        guard let yearlyPrice = iap.getPrice(for: .yearly) else { return nil }
+        let monthly = NSDecimalNumber(decimal: yearlyPrice).doubleValue / 12
 
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.locale = Locale.current
 
-        guard let formatted = formatter.string(from: NSNumber(value: monthly)) else {
-            return ""
-        }
-        return "\(formatted)/month equivalent"
+        guard let value = formatter.string(from: NSNumber(value: monthly)) else { return nil }
+        return "Just \(value)/month"
     }
 
     var body: some View {
-        let yearlyTrialSubtitle = iap.introductoryOfferDetails(for: .yearly)
-        let weeklyTrialSubtitle = iap.introductoryOfferDetails(for: .weekly)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Choose your plan")
+                    .font(.system(size: 21, weight: .bold, design: .rounded))
 
-        VStack(spacing: 12) {
-            Text("Choose your plan")
-                .font(.system(size: 18, weight: .bold))
-                .frame(maxWidth: .infinity, alignment: .leading)
+                Spacer()
+
+                Text("Cancel anytime")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
 
             PaywallPlanRow(
-                plan: .yearly,
-                title: yearlyTrialSubtitle ?? "Annual PRO",
-                priceText: yearlyTrialSubtitle != nil ? "then \(iap.priceText(for: .yearly))/year" : "\(iap.priceText(for: .yearly))/year",
-                subtitle: yearlyTrialSubtitle != nil ? "Annual PRO" : (yearlyEquivalentMonthlyText.isEmpty ? savingsText : "\(savingsText) • \(yearlyEquivalentMonthlyText)"),
-                badge: "MOST POPULAR",
+                title: "Annual",
+                price: iap.priceText(for: .yearly),
+                period: "per year",
+                detail: iap.introductoryOfferDetails(for: .yearly)
+                    ?? monthlyPriceText
+                    ?? savingsText
+                    ?? "Best value",
+                badge: (savingsText ?? "Best value").uppercased(),
+                isTrial: iap.introductoryOfferDetails(for: .yearly) != nil,
                 isSelected: vm.selectedPlan == .yearly,
-                onSelect: { vm.selectedPlan = .yearly },
-                isTrialOffer: yearlyTrialSubtitle != nil,
-                isPrimary: true
-            )
-            
-            PaywallPlanRow(
-                plan: .weekly,
-                title: weeklyTrialSubtitle ?? "Weekly PRO",
-                priceText: weeklyTrialSubtitle != nil ? "then \(iap.priceText(for: .weekly))/week" : "\(iap.priceText(for: .weekly))/week",
-                subtitle: weeklyTrialSubtitle != nil ? "Weekly PRO" : "Flexible short-term access",
-                badge: nil,
-                isSelected: vm.selectedPlan == .weekly,
-                onSelect: { vm.selectedPlan = .weekly },
-                isTrialOffer: weeklyTrialSubtitle != nil,
-                isPrimary: false
+                onSelect: { vm.selectedPlan = .yearly }
             )
 
-            // if vm.selectedPlan == .yearly {
-            //     Text("Most users choose Annual to save more")
-            //         .font(.system(size: 13, weight: .medium))
-            //         .foregroundColor(.secondary)
-            //         .frame(maxWidth: .infinity, alignment: .leading)
-            // }
+            PaywallPlanRow(
+                title: "Weekly",
+                price: iap.priceText(for: .weekly),
+                period: "per week",
+                detail: iap.introductoryOfferDetails(for: .weekly) ?? "Flexible short-term access",
+                badge: nil,
+                isTrial: iap.introductoryOfferDetails(for: .weekly) != nil,
+                isSelected: vm.selectedPlan == .weekly,
+                onSelect: { vm.selectedPlan = .weekly }
+            )
         }
-        .padding(.horizontal, 20)
     }
 }
 
 private struct PaywallPlanRow: View {
-    let plan: SubscriptionPlan
     let title: String
-    let priceText: String
-    let subtitle: String
+    let price: String
+    let period: String
+    let detail: String
     let badge: String?
+    let isTrial: Bool
     let isSelected: Bool
     let onSelect: () -> Void
-    var isTrialOffer: Bool = false
-    var isPrimary: Bool = false
+
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Button(action: onSelect) {
-            HStack(spacing: 16) {
-                // Radio button
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(isSelected ? PaywallTheme.primaryEnd : PaywallTheme.secondaryText(for: colorScheme))
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .stroke(
+                            isSelected ? PaywallTheme.accent(for: colorScheme) : Color.secondary.opacity(0.35),
+                            lineWidth: 2
+                        )
+                        .frame(width: 24, height: 24)
+
+                    if isSelected {
+                        Circle()
+                            .fill(PaywallTheme.accent(for: colorScheme))
+                            .frame(width: 14, height: 14)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack(spacing: 8) {
                         Text(title)
-                            .font(.system(size: isPrimary ? 19 : 17, weight: isTrialOffer ? .bold : .semibold))
-                            .foregroundColor(PaywallTheme.primaryText(for: colorScheme))
-                        
-                        Spacer()
-                        
-                        if let badge = badge {
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(.primary)
+
+                        if let badge {
                             Text(badge)
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [PaywallTheme.warningStart, PaywallTheme.warningEnd]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .clipShape(Capsule())
+                                .font(.system(size: 9, weight: .heavy))
+                                .foregroundStyle(Color.fromHex("#064E3B"))
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 4)
+                                .background(PaywallTheme.mint, in: Capsule())
                         }
                     }
-                    
-                    Text(subtitle)
-                        .font(.system(size: isPrimary ? 14 : 13))
-                        .foregroundColor(PaywallTheme.secondaryText(for: colorScheme))
-                    
-                    Text(priceText)
-                        .font(.system(size: isPrimary ? 17 : 15, weight: .medium))
-                        .foregroundColor(isSelected ? .white : PaywallTheme.primaryStart)
+
+                    HStack(spacing: 5) {
+                        Text(detail)
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(isTrial ? PaywallTheme.accent(for: colorScheme) : Color.secondary)
                 }
-                
-                Spacer()
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(price)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(.primary)
+                    Text(period)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, isPrimary ? 18 : 14)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(isSelected ? 
-                        PaywallTheme.selectedRowFill(for: colorScheme) :
-                        LinearGradient(
-                            colors: [
-                                PaywallTheme.surface(for: colorScheme),
-                                PaywallTheme.surface(for: colorScheme)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                PaywallTheme.surface(for: colorScheme),
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(
-                        isSelected ? 
-                            LinearGradient(
-                                colors: [PaywallTheme.primaryStart, PaywallTheme.primaryEnd],
-                                startPoint: .bottomTrailing ,
-                                endPoint: .topLeading
-                            ) :
-                            LinearGradient(
-                                colors: [PaywallTheme.unselectedRowBorder(for: colorScheme), PaywallTheme.unselectedRowBorder(for: colorScheme)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
+                        isSelected ? PaywallTheme.accent(for: colorScheme) : PaywallTheme.border(for: colorScheme),
                         lineWidth: isSelected ? 2 : 1
                     )
             )
-            .shadow(color: isSelected ? PaywallTheme.primaryStart.opacity(colorScheme == .dark ? 0.12 : (isPrimary ? 0.22 : 0.17)) : Color.clear, radius: isPrimary ? 8 : 5, x: 0, y: 3)
-            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -413,173 +455,95 @@ private struct PaywallPlanRow: View {
 private struct PaywallContinueButton: View {
     let action: () async -> Void
     let isDisabled: Bool
+
     @EnvironmentObject private var vm: PaywallVM
     @EnvironmentObject private var iap: IAPManager
-    @State private var isPressed = false
+
+    private var trialDetails: String? {
+        iap.introductoryOfferDetails(for: vm.selectedPlan)
+    }
 
     private var buttonText: String {
-        // If the yearly plan is selected and the user is eligible for a free trial,
-        // show "Start Free Trial". Otherwise, show "Subscribe Now".
-        if iap.introductoryOfferDetails(for: vm.selectedPlan) != nil {
-            return "Try for Free"
+        if let trialDetails {
+            return "Start \(trialDetails)"
         }
-        return "Continue"
+        return vm.selectedPlan == .yearly ? "Continue with Annual" : "Continue with Weekly"
     }
-    
+
     var body: some View {
-        VStack(spacing: 16) {
-            // Enhanced benefit indicator
-            if vm.selectedPlan == .yearly && iap.introductoryOfferDetails(for: .yearly) != nil {
-                HStack(spacing: 8) {
-                    Image(systemName: "gift.fill")
-                        .foregroundColor(PaywallTheme.primaryStart)
-                        .font(.system(size: 16, weight: .medium))
-                    Text("No payment now • Cancel anytime")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.primary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(PaywallTheme.primaryStart.opacity(0.12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(PaywallTheme.primaryStart.opacity(0.35), lineWidth: 1)
-                        )
-                )
-            } else if vm.selectedPlan == .weekly {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.shield.fill")
-                        .foregroundColor(PaywallTheme.primaryEnd)
-                        .font(.system(size: 16, weight: .medium))
-                    Text("Cancel anytime • No commitment")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.primary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(PaywallTheme.primaryEnd.opacity(0.12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20)
-                                .stroke(PaywallTheme.primaryEnd.opacity(0.35), lineWidth: 1)
-                        )
-                )
-            }
-            
-            // Enhanced button with better interaction
+        VStack(spacing: 12) {
             Button(action: {
-                let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-                impactFeedback.impactOccurred()
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 Task { await action() }
             }) {
-                HStack(spacing: 12) {
-                    Spacer()
-                    
-                    if vm.selectedPlan == .yearly && iap.introductoryOfferDetails(for: .yearly) != nil {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(Color.fromHex("#111827"))
-                    }
-                    
+                HStack(spacing: 10) {
                     Text(buttonText)
-                        .font(.system(size: 19, weight: .bold))
-                        .foregroundColor(Color.fromHex("#111827"))
-                    
                     Image(systemName: "arrow.right")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(Color.fromHex("#111827"))
-                    
-                    Spacer()
                 }
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(PaywallTheme.ink)
+                .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(
-                    Color.white
-                )
-                .cornerRadius(16)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.black.opacity(0.08), lineWidth: 1.5)
-                )
-                .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 4)
-                .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
-                .scaleEffect(isPressed ? 0.97 : 1.0)
+                .background(PaywallTheme.mint)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
-            .scaleEffect(isDisabled ? 0.95 : 1.0)
-            .opacity(isDisabled ? 0.6 : 1.0)
+            .buttonStyle(.plain)
             .disabled(isDisabled)
-            .onLongPressGesture(minimumDuration: 0, maximumDistance: .infinity, pressing: { pressing in
-                withAnimation(.easeInOut(duration: 0.1)) {
-                    isPressed = pressing
-                }
-            }, perform: {})
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
-            .animation(.easeInOut(duration: 0.2), value: isDisabled)
+            .opacity(isDisabled ? 0.55 : 1)
+
+            Text(trialDetails == nil ? "Secure payment through the App Store" : "No charge today • Cancel anytime")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
         }
-        .padding(.horizontal, 20)
     }
 }
 
 private struct AuxButtonsBar: View {
     let isDisabled: Bool
     let restoreAction: () -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        HStack(spacing: 24) {
-            Button("Restore", action: restoreAction)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.gray)
-                .disabled(isDisabled)
-        }
-        .padding(.top, 8)
+        Button("Restore Purchases", action: restoreAction)
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(PaywallTheme.accent(for: colorScheme))
+            .disabled(isDisabled)
     }
 }
 
 private struct LegalTextView: View {
     let selectedPlan: SubscriptionPlan
+
     @EnvironmentObject private var iap: IAPManager
-    
+    @Environment(\.colorScheme) private var colorScheme
+
     private var renewalPeriod: String {
-        switch selectedPlan {
-        case .weekly:
-            return "per week"
-        case .yearly:
-            return "per year"
-        }
-    }
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            Text(legalText)
-                .font(.system(size: 11, weight: .light))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
-            
-            HStack(spacing: 20) {
-                Link("Terms of Service", destination: URL(string: "https://verby.co/math")!)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(PaywallTheme.primaryEnd)
-                
-                Link("Privacy Policy", destination: URL(string: "https://verby.co/math/privacy")!)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(PaywallTheme.primaryEnd)
-            }
-            
-        }
+        selectedPlan == .weekly ? "week" : "year"
     }
 
     private var legalText: String {
         let price = iap.priceText(for: selectedPlan)
-        
-        let trialInfo: String
-        if let trialDetails = iap.introductoryOfferDetails(for: selectedPlan) {
-            trialInfo = " after " + trialDetails.lowercased()
-        } else {
-            trialInfo = ""
+        if let trial = iap.introductoryOfferDetails(for: selectedPlan) {
+            return "After the \(trial.lowercased()), your subscription renews automatically for \(price) per \(renewalPeriod) until cancelled."
         }
-        
-        return "This subscription automatically renews for \(price) \(renewalPeriod)\(trialInfo). You can cancel anytime."
+        return "Your subscription renews automatically for \(price) per \(renewalPeriod) until cancelled."
     }
-} 
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Text(legalText)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 22) {
+                Link("Terms", destination: URL(string: "https://verby.co/math")!)
+                Link("Privacy", destination: URL(string: "https://verby.co/math/privacy")!)
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(PaywallTheme.accent(for: colorScheme))
+        }
+    }
+}

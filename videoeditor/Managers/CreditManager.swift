@@ -44,6 +44,32 @@ class CreditManager: ObservableObject {
         loadCredits()
         loadReviewPromptState()
     }
+
+#if DEBUG
+    /// Restores the complete free allowance immediately from the in-app Debug controls.
+    @discardableResult
+    func resetCreditsForDebug() -> Bool {
+        guard let resettableLedger = ledger as? FreeAllowanceLedger else {
+            return false
+        }
+
+        // Prevent the one-time UserDefaults migration from restoring a consumed
+        // balance after the Keychain entry is removed.
+        reviewDefaults.removeObject(forKey: legacyCreditsKey)
+        reviewDefaults.removeObject(forKey: legacyFirstLaunchKey)
+
+        guard resettableLedger.resetForDebug() else {
+            print("CreditManager: failed to reset free credits")
+            return false
+        }
+
+        apply(
+            ledger.bootstrap(usedTasks: 0, now: Date()),
+            operation: "debug reset"
+        )
+        return remainingCredits == FreeAllowancePolicy.totalCredits
+    }
+#endif
     
     /// Loads the authoritative usage count from Keychain. Existing installs are
     /// migrated once from the former UserDefaults-backed credit count.

@@ -7,6 +7,16 @@
     " Privacy Policy." : {
 
     },
+    "%lld %@ left" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ left"
+          }
+        }
+      }
+    },
     "•" : {
 
     },
@@ -88,7 +98,7 @@
         }
       }
     },
-    "Cancel anytime • No commitment" : {
+    "Cancel anytime" : {
 
     },
     "Capture photo" : {
@@ -132,6 +142,12 @@
           }
         }
       }
+    },
+    "Close" : {
+
+    },
+    "Connecting to the App Store…" : {
+
     },
     "Continue" : {
       "extractionState" : "manual",
@@ -181,12 +197,6 @@
         }
       }
     },
-    "Everything You Need" : {
-
-    },
-    "Get Detailed Step by Step Solution" : {
-
-    },
     "Get Started" : {
 
     },
@@ -210,9 +220,6 @@
     "Include the full problem, not just parts of it" : {
 
     },
-    "Join thousands of users who create professional PDFs every day" : {
-
-    },
     "Language Settings" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -231,6 +238,9 @@
 
     },
     "Math Solver" : {
+
+    },
+    "Math Solver Pro" : {
 
     },
     "Microphone Access Needed" : {
@@ -255,7 +265,10 @@
         }
       }
     },
-    "No payment now • Cancel anytime" : {
+    "No charge today • Cancel anytime" : {
+
+    },
+    "No scans left" : {
 
     },
     "OK" : {
@@ -415,7 +428,7 @@
     "PDF Reporter" : {
 
     },
-    "Privacy Policy" : {
+    "Privacy" : {
 
     },
     "Privacy Policy." : {
@@ -441,6 +454,12 @@
         }
       }
     },
+    "Reset Credits" : {
+
+    },
+    "Reset Defaults" : {
+
+    },
     "Restore" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -451,6 +470,9 @@
           }
         }
       }
+    },
+    "Restore Purchases" : {
+
     },
     "Return to camera view to take a new photo" : {
 
@@ -498,6 +520,9 @@
           }
         }
       }
+    },
+    "Secure payment through the App Store" : {
+
     },
     "Select a photo of a math problem" : {
 
@@ -569,6 +594,9 @@
 
     },
     "Take photo of a math question" : {
+
+    },
+    "Terms" : {
 
     },
     "Terms of Service" : {
@@ -656,6 +684,9 @@
 
     },
     "Unlimited" : {
+
+    },
+    "Unlimited scans and clear, step-by-step solutions." : {
 
     },
     "Upgrade" : {

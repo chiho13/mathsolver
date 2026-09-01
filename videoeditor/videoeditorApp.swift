@@ -56,7 +56,10 @@ struct videoeditorApp: App {
                         .environmentObject(iapManager)
 //                        .environment(\.locale, Locale(identifier: "ja"))
                 } else {
-                    ContentView()
+                    ContentView(onResetDefaults: {
+                        showPremView = false
+                        isFirstLaunch = true
+                    })
                         .environmentObject(iapManager)
                         .environmentObject(creditManager)
 //                        .environment(\.locale, Locale(identifier: "zh-Hant"))
