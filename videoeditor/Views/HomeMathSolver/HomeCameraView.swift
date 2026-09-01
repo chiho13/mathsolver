@@ -252,7 +252,7 @@ extension CameraView.Coordinator: AVCapturePhotoCaptureDelegate {
         if let croppedImage = croppedImage {
             self.parent.viewModel.selectedImage = croppedImage
             Task {
-                await self.parent.viewModel.solveMathProblem(deductCredit: false)
+                await self.parent.viewModel.solveMathProblem()
             }
         } else {
             self.parent.viewModel.errorMessage = "Failed to crop the image. Please try again."

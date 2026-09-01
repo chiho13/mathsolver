@@ -44,6 +44,10 @@ class VisionViewModel: ObservableObject {
     
     // Credit manager reference (will be set from ContentView)
     var creditManager: CreditManager?
+
+    /// Captured by the solve entry point so premium users are never charged even if
+    /// their entitlement state changes while the request is in flight.
+    var shouldConsumeCreditOnSuccessfulSolve = true
     
     // MARK: - Public Methods
     
@@ -80,7 +84,7 @@ class VisionViewModel: ObservableObject {
     
     /// Performs math problem solving with automatic detection
     @MainActor
-    func solveMathProblem(deductCredit: Bool = true) async {
+    func solveMathProblem(consumeCreditOnSuccess: Bool? = nil) async {
         guard !isLoading else {
             return
         }
@@ -90,6 +94,9 @@ class VisionViewModel: ObservableObject {
             return
         }
         
+        let shouldConsumeCredit = consumeCreditOnSuccess
+            ?? shouldConsumeCreditOnSuccessfulSolve
+
         // Reset state for a new request
         isLoading = true
         isAnimatingCroppedArea = true
@@ -101,9 +108,10 @@ class VisionViewModel: ObservableObject {
             print("Vision Response (Math): \(response)")
             self.visionResponse = response
             
-            // Only consume credit if the request was successful, we have a credit manager, and credit deduction is requested
-            if deductCredit, let creditManager = creditManager {
-                let _ = creditManager.useCredit()
+            // A failed request throws before this point, so only a completed solution
+            // consumes one of the three free credits.
+            if shouldConsumeCredit, let creditManager {
+                creditManager.recordSuccessfulSolve()
             }
         } catch let error as VisionError {
             self.errorMessage = self.handleVisionError(error)

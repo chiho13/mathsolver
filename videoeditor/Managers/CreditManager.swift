@@ -13,18 +13,18 @@ import UIKit
 @MainActor
 class CreditManager: ObservableObject {
     @Published var remainingCredits: Int = 0
-    @Published var hasCredits: Bool = true
+    @Published var hasCredits: Bool = false
     
-    private let userDefaults = UserDefaults.standard
-    private let creditsKey = "previewCredits"
-    private let firstLaunchKey = "creditFirstLaunch"
+    private let ledger: FreeAllowanceLedgerProviding
+    private let reviewDefaults: UserDefaults
+    private let legacyCreditsKey = "previewCredits"
+    private let legacyFirstLaunchKey = "creditFirstLaunch"
     private let reviewTotalCompletedSessionsKey = "reviewTotalCompletedSessions"
     private let reviewCompletedSessionsSincePromptKey = "reviewCompletedSessionsSincePrompt"
     private let reviewLastPromptVersionKey = "reviewLastPromptVersion"
     private let reviewLastPromptTimestampKey = "reviewLastPromptTimestamp"
     
     // Configuration
-    private let initialCredits = 4 // Give users 3 free math solutions
     private let reviewMinCompletedSessions = 3
     private let reviewCooldownDays = 30
     private let reviewRequestDelay: TimeInterval = 5
@@ -35,60 +35,97 @@ class CreditManager: ObservableObject {
     private var reviewLastPromptTimestamp: TimeInterval = 0
     private var pendingReviewRequest: DispatchWorkItem?
     
-    init() {
+    init(
+        ledger: FreeAllowanceLedgerProviding = FreeAllowanceLedger.shared,
+        reviewDefaults: UserDefaults = .standard
+    ) {
+        self.ledger = ledger
+        self.reviewDefaults = reviewDefaults
         loadCredits()
         loadReviewPromptState()
     }
     
-    /// Load credits from UserDefaults
+    /// Loads the authoritative usage count from Keychain. Existing installs are
+    /// migrated once from the former UserDefaults-backed credit count.
     private func loadCredits() {
-        // Check if this is the first time setting up credits
-        if !userDefaults.bool(forKey: firstLaunchKey) {
-            // First launch - give initial credits
-            userDefaults.set(initialCredits, forKey: creditsKey)
-            userDefaults.set(true, forKey: firstLaunchKey)
-            remainingCredits = initialCredits
+        let legacyUsedTasks: Int
+        if reviewDefaults.bool(forKey: legacyFirstLaunchKey),
+           reviewDefaults.object(forKey: legacyCreditsKey) != nil {
+            // The old release granted four credits even though its UI comment said three.
+            let oldInitialCredits = 4
+            let oldRemainingCredits = max(0, reviewDefaults.integer(forKey: legacyCreditsKey))
+            legacyUsedTasks = FreeAllowancePolicy.clampUsedTasks(
+                oldInitialCredits - oldRemainingCredits
+            )
         } else {
-            // Load existing credits
-            remainingCredits = userDefaults.integer(forKey: creditsKey)
+            legacyUsedTasks = 0
         }
-        
-        hasCredits = remainingCredits > 0
-        print("CreditManager: Loaded \(remainingCredits) credits")
+
+        apply(
+            ledger.bootstrap(usedTasks: legacyUsedTasks, now: Date()),
+            operation: "load"
+        )
     }
     
-    /// Save credits to UserDefaults
-    private func saveCredits() {
-        userDefaults.set(remainingCredits, forKey: creditsKey)
-        hasCredits = remainingCredits > 0
-        print("CreditManager: Saved \(remainingCredits) credits")
+    private func apply(
+        _ result: FreeAllowanceLedgerLoadResult,
+        operation: String
+    ) {
+        switch result {
+        case .available(let snapshot):
+            remainingCredits = FreeAllowancePolicy.remainingCredits(
+                usedTasks: snapshot.usedTasks
+            )
+            hasCredits = FreeAllowancePolicy.canStartSolve(
+                usedTasks: snapshot.usedTasks
+            )
+            print("CreditManager: \(operation) completed with \(remainingCredits) credits remaining")
+
+        case .missing:
+            failClosed(operation: operation, reason: "missing Keychain snapshot")
+
+        case .unavailable(let error):
+            failClosed(operation: operation, reason: String(describing: error))
+        }
+    }
+
+    private func failClosed(operation: String, reason: String) {
+        remainingCredits = 0
+        hasCredits = false
+        print("CreditManager: \(operation) failed closed: \(reason)")
     }
     
     private func loadReviewPromptState() {
-        reviewTotalCompletedSessions = userDefaults.integer(forKey: reviewTotalCompletedSessionsKey)
-        reviewCompletedSessionsSincePrompt = userDefaults.integer(forKey: reviewCompletedSessionsSincePromptKey)
-        reviewLastPromptVersion = userDefaults.string(forKey: reviewLastPromptVersionKey) ?? ""
-        reviewLastPromptTimestamp = userDefaults.double(forKey: reviewLastPromptTimestampKey)
+        reviewTotalCompletedSessions = reviewDefaults.integer(forKey: reviewTotalCompletedSessionsKey)
+        reviewCompletedSessionsSincePrompt = reviewDefaults.integer(forKey: reviewCompletedSessionsSincePromptKey)
+        reviewLastPromptVersion = reviewDefaults.string(forKey: reviewLastPromptVersionKey) ?? ""
+        reviewLastPromptTimestamp = reviewDefaults.double(forKey: reviewLastPromptTimestampKey)
     }
     
     private func saveReviewPromptState() {
-        userDefaults.set(reviewTotalCompletedSessions, forKey: reviewTotalCompletedSessionsKey)
-        userDefaults.set(reviewCompletedSessionsSincePrompt, forKey: reviewCompletedSessionsSincePromptKey)
-        userDefaults.set(reviewLastPromptVersion, forKey: reviewLastPromptVersionKey)
-        userDefaults.set(reviewLastPromptTimestamp, forKey: reviewLastPromptTimestampKey)
+        reviewDefaults.set(reviewTotalCompletedSessions, forKey: reviewTotalCompletedSessionsKey)
+        reviewDefaults.set(reviewCompletedSessionsSincePrompt, forKey: reviewCompletedSessionsSincePromptKey)
+        reviewDefaults.set(reviewLastPromptVersion, forKey: reviewLastPromptVersionKey)
+        reviewDefaults.set(reviewLastPromptTimestamp, forKey: reviewLastPromptTimestampKey)
     }
     
-    /// Use one credit (call before solving math problem)
-    func useCredit() -> Bool {
-        guard remainingCredits > 0 else {
+    /// Records one successfully solved task. Failed requests never reach this method.
+    @discardableResult
+    func recordSuccessfulSolve() -> Bool {
+        guard hasCredits else {
             print("CreditManager: No credits remaining")
             return false
         }
-        
-        remainingCredits -= 1
-        saveCredits()
-        print("CreditManager: Used 1 credit, \(remainingCredits) remaining")
-        return true
+
+        let usedTasks = FreeAllowancePolicy.totalCredits - remainingCredits
+        let updatedUsedTasks = FreeAllowancePolicy.usedTasksAfterSuccessfulSolve(usedTasks)
+        let result = ledger.checkpoint(usedTasks: updatedUsedTasks, now: Date())
+        apply(result, operation: "successful solve checkpoint")
+
+        guard case .available(let snapshot) = result else {
+            return false
+        }
+        return snapshot.usedTasks >= updatedUsedTasks
     }
     
     /// Check if user has credits available
@@ -106,20 +143,6 @@ class CreditManager: ObservableObject {
         default:
             return "\(remainingCredits) credits left"
         }
-    }
-    
-    /// Reset credits (for testing purposes)
-    func resetCredits() {
-        remainingCredits = initialCredits
-        saveCredits()
-        print("CreditManager: Reset to \(initialCredits) credits")
-    }
-    
-    /// Add credits (for premium users or promotions)
-    func addCredits(_ amount: Int) {
-        remainingCredits += amount
-        saveCredits()
-        print("CreditManager: Added \(amount) credits, total: \(remainingCredits)")
     }
     
     func scheduleReviewRequestAfterSolutionShownIfEligible() {

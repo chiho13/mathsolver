@@ -231,10 +231,7 @@ struct ContentView: View {
                                 // Step 1: Check if user is premium first, then credits
                                 if !viewModel.isAnimatingShutter && !viewModel.isAnimatingCroppedArea {
                                     if iap.isPremium || creditManager.canUseMathSolver() {
-                                        // Deduct credit here since user is initiating the solve action
-                                        if !iap.isPremium {
-                                            let _ = creditManager.useCredit()
-                                        }
+                                        viewModel.shouldConsumeCreditOnSuccessfulSolve = !iap.isPremium
                                         viewModel.isAnimatingShutter = true
                                         // Step 2: Show spinner, trigger capture
                                         triggerCapture = true
@@ -350,10 +347,7 @@ struct ContentView: View {
         
         // Check if user is premium first, then credits before processing
         if iap.isPremium || creditManager.canUseMathSolver() {
-            // Deduct credit here since user is initiating the solve action
-            if !iap.isPremium {
-                let _ = creditManager.useCredit()
-            }
+            viewModel.shouldConsumeCreditOnSuccessfulSolve = !iap.isPremium
             
             // Crop the image and process it
             if let image = selectedPhotoImage {
@@ -363,7 +357,7 @@ struct ContentView: View {
                     viewModel.isAnimatingCroppedArea = true // Trigger dot animation
                     
                     Task {
-                        await viewModel.solveMathProblem(deductCredit: false) // Send to backend
+                        await viewModel.solveMathProblem() // Send to backend
                     }
                 }
             }
